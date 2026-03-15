@@ -30,7 +30,7 @@ import {
   getDailyStats,
 } from './tradeManager.js';
 import { getWalletBalance, getWalletAddress, generateWallet } from './polymarket.js';
-import { setBotInstance, startScheduler } from './scheduler.js';
+import { setBotInstance, startScheduler, runCycle } from './scheduler.js';
 
 // ── Validation helpers ────────────────────────────────────────────────────────
 
@@ -736,6 +736,31 @@ bot.on('message', async (ctx, next) => {
   }
 });
 
+// ── /scan ─────────────────────────────────────────────────────────────────────
+
+const VALID_SCAN_MODES = ['markets', 'crypto', 'stocks', 'football', 'all'];
+
+bot.command('scan', async ctx => {
+  const args = ctx.message.text.split(' ');
+  const mode = args[1]?.toLowerCase() || 'markets';
+
+  if (!VALID_SCAN_MODES.includes(mode)) {
+    return ctx.replyWithMarkdown(
+      `⚠️ Invalid mode. Choose one of: \`${VALID_SCAN_MODES.join('`, `')}\`\n\nExample: /scan markets`
+    );
+  }
+
+  await ctx.replyWithMarkdown(`🔍 *Scanning ${mode} signals...* This may take a moment.`);
+
+  try {
+    await runCycle(mode);
+    await ctx.replyWithMarkdown(`✅ *${mode.charAt(0).toUpperCase() + mode.slice(1)} scan complete.* New signals (if any) have been broadcast and saved.`);
+  } catch (err) {
+    console.error('[Bot] /scan error:', err.message);
+    await ctx.reply('⚠️ Scan encountered an error. Check the logs.');
+  }
+});
+
 // ── Error handling ────────────────────────────────────────────────────────────
 
 bot.catch((err, ctx) => {
@@ -785,6 +810,7 @@ bot.launch({
       { command: 'setmaxdailyloss', description: 'Set daily loss limit' },
       { command: 'pause',          description: 'Pause auto trading' },
       { command: 'resume',         description: 'Resume auto trading' },
+      { command: 'scan',           description: 'Manually trigger a signal scan' },
       { command: 'exportkey',      description: 'Export your private key (DM only)' },
       { command: 'deletekey',      description: 'Remove your stored key' },
     ]);

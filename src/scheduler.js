@@ -45,7 +45,7 @@ async function sendToUser(userId, text) {
 
 // ── Signal cycle runner ───────────────────────────────────────────────────────
 
-async function runCycle(mode) {
+export async function runCycle(mode) {
   const label = mode.toUpperCase();
   console.log(`[Scheduler] Running ${label} signal cycle at ${new Date().toISOString()}`);
 
