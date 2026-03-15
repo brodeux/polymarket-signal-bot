@@ -53,6 +53,12 @@ export const MARKET_CATEGORIES = {
     tagSlug:  'crypto',
     keywords: ['Bitcoin', 'Ethereum', 'Solana', 'BTC', 'ETH', 'SOL', 'crypto'],
   },
+  football_markets: {
+    label:    'Football',
+    emoji:    '⚽',
+    tagSlug:  'soccer',
+    keywords: ['Premier League', 'Champions League', 'La Liga', 'Bundesliga', 'Serie A', 'FIFA', 'UEFA', 'World Cup'],
+  },
 };
 
 // ── Market fetching ───────────────────────────────────────────────────────────

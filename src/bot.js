@@ -738,7 +738,7 @@ bot.on('message', async (ctx, next) => {
 
 // ── /scan ─────────────────────────────────────────────────────────────────────
 
-const VALID_SCAN_MODES = ['markets', 'crypto', 'stocks', 'football', 'all'];
+const VALID_SCAN_MODES = ['markets', 'crypto', 'stocks', 'football', 'football_markets', 'all'];
 
 bot.command('scan', async ctx => {
   const args = ctx.message.text.split(' ');
@@ -810,7 +810,7 @@ bot.launch({
       { command: 'setmaxdailyloss', description: 'Set daily loss limit' },
       { command: 'pause',          description: 'Pause auto trading' },
       { command: 'resume',         description: 'Resume auto trading' },
-      { command: 'scan',           description: 'Manually trigger a signal scan' },
+      { command: 'scan',           description: 'Trigger signal scan (markets/crypto/football_markets/all)' },
       { command: 'exportkey',      description: 'Export your private key (DM only)' },
       { command: 'deletekey',      description: 'Remove your stored key' },
     ]);

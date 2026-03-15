@@ -249,11 +249,12 @@ export async function processSignals(signals) {
  */
 /**
  * mode options:
- *   'stocks'        — TSLA + NVDA only
- *   'crypto'        — BTC, ETH, SOL only
- *   'football'      — live football matches only
- *   'markets'       — Polymarket category scan (politics, sports, world, entertainment)
- *   'all'           — full hourly scan: stocks + crypto + football (live+upcoming) + markets
+ *   'stocks'            — TSLA + NVDA only
+ *   'crypto'            — BTC, ETH, SOL only
+ *   'football'          — live football matches (API-Football, requires subscription)
+ *   'football_markets'  — football/soccer markets on Polymarket (no external API needed)
+ *   'markets'           — Polymarket category scan (politics, sports, world, entertainment, crypto)
+ *   'all'               — full hourly scan: all sources combined
  */
 export async function runSignalCycle(mode = 'all') {
   const allSignals = [];
@@ -273,6 +274,12 @@ export async function runSignalCycle(mode = 'all') {
       const footballMode = mode === 'football' ? 'live' : 'all';
       const footballSignals = await generateFootballSignals(footballMode);
       allSignals.push(...footballSignals);
+    }
+
+    if (mode === 'football_markets' || mode === 'all') {
+      // Scan Polymarket for football/soccer markets — no external API key needed
+      const footballMarketSignals = await scanCategory('football_markets', 20);
+      allSignals.push(...footballMarketSignals);
     }
 
     if (mode === 'markets' || mode === 'all') {

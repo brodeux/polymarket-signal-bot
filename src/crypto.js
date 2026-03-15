@@ -22,6 +22,22 @@ const cgClient = axios.create({
   headers: { 'Accept': 'application/json' },
 });
 
+// ── Response cache (15 min TTL) ───────────────────────────────────────────────
+// CoinGecko free tier rate-limits OHLC and market_chart endpoints aggressively.
+// Cache responses so each endpoint is only hit once per 15-minute window.
+const CACHE_TTL = 15 * 60 * 1000;
+const _cache = {};
+
+function cacheGet(key) {
+  const entry = _cache[key];
+  if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
+  return null;
+}
+
+function cacheSet(key, data) {
+  _cache[key] = { ts: Date.now(), data };
+}
+
 // Map from our ticker labels to CoinGecko coin IDs and Polymarket search terms
 const COINS = [
   { ticker: 'BTC', id: 'bitcoin',  marketQuery: 'Bitcoin price' },
@@ -61,18 +77,25 @@ async function fetchPrices() {
  * Returns array of { time, open, high, low, close }.
  */
 async function fetchOHLC(coinId, days = 1) {
+  const key = `ohlc_${coinId}_${days}`;
+  const cached = cacheGet(key);
+  if (cached) return cached;
+
   try {
+    await sleep(1000); // extra breathing room before hitting the endpoint
     const { data } = await cgClient.get(`/coins/${coinId}/ohlc`, {
       params: { vs_currency: 'usd', days },
     });
     // CoinGecko returns [[timestamp, open, high, low, close], ...]
-    return (data || []).map(c => ({
+    const result = (data || []).map(c => ({
       time:  c[0],
       open:  c[1],
       high:  c[2],
       low:   c[3],
       close: c[4],
     }));
+    cacheSet(key, result);
+    return result;
   } catch (err) {
     console.error(`[Crypto] fetchOHLC error for ${coinId}:`, err.message);
     return [];
@@ -84,13 +107,19 @@ async function fetchOHLC(coinId, days = 1) {
  * Returns average daily volume in USD.
  */
 async function fetchAvgVolume(coinId) {
+  const key = `avgvol_${coinId}`;
+  const cached = cacheGet(key);
+  if (cached !== null) return cached;
+
   try {
+    await sleep(1000);
     const { data } = await cgClient.get(`/coins/${coinId}/market_chart`, {
       params: { vs_currency: 'usd', days: 7, interval: 'daily' },
     });
     const volumes = (data.total_volumes || []).map(v => v[1]);
-    if (!volumes.length) return 0;
-    return volumes.reduce((a, b) => a + b, 0) / volumes.length;
+    const avg = volumes.length ? volumes.reduce((a, b) => a + b, 0) / volumes.length : 0;
+    cacheSet(key, avg);
+    return avg;
   } catch (err) {
     console.error(`[Crypto] fetchAvgVolume error for ${coinId}:`, err.message);
     return 0;

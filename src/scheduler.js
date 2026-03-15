@@ -145,20 +145,17 @@ async function sendDailySummaries() {
 // ── Cron jobs ─────────────────────────────────────────────────────────────────
 
 export function startScheduler() {
-  // Every 5 minutes — crypto only (BTC, ETH, SOL via CoinGecko)
-  cron.schedule('*/5 * * * *', async () => {
-    await runCycle('crypto');
-  }, { timezone: 'UTC' });
-
-  // Every 15 minutes — stocks (TSLA, NVDA) + live football matches
+  // Every 15 minutes — crypto (BTC, ETH, SOL) + stocks (TSLA, NVDA) + live football
   cron.schedule('*/15 * * * *', async () => {
+    await runCycle('crypto');
     await runCycle('stocks');
     await runCycle('football');
   }, { timezone: 'UTC' });
 
-  // Every 30 minutes — Polymarket category scan (politics, sports, world, entertainment)
+  // Every 30 minutes — Polymarket category scan (politics, sports, world, entertainment, football)
   cron.schedule('*/30 * * * *', async () => {
     await runCycle('markets');
+    await runCycle('football_markets');
   }, { timezone: 'UTC' });
 
   // Every hour — full market scan (all sources combined)

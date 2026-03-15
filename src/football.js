@@ -53,7 +53,12 @@ export async function fetchLiveMatches() {
     }
     return data.response || [];
   } catch (err) {
-    console.error('[Football] fetchLiveMatches error:', err.response?.status, err.message);
+    const status = err.response?.status;
+    if (status === 403) {
+      console.log('[Football] API key not subscribed to API-Football (403) — skipping');
+    } else {
+      console.error('[Football] fetchLiveMatches error:', status, err.message);
+    }
     return [];
   }
 }
@@ -75,7 +80,12 @@ export async function fetchUpcomingFixtures() {
       const { data } = await client.get(`/fixtures?league=${league}&date=${today}&season=${season}`);
       if (data.response) all.push(...data.response);
     } catch (err) {
-      console.error(`[Football] fetchUpcomingFixtures error for league ${league}:`, err.response?.status, err.message);
+      const status = err.response?.status;
+      if (status === 403) {
+        console.log('[Football] API key not subscribed (403) — skipping upcoming fixtures');
+        break; // no point trying more leagues
+      }
+      console.error(`[Football] fetchUpcomingFixtures error for league ${league}:`, status, err.message);
     }
   }
 
@@ -248,6 +258,11 @@ async function analyseFixture(fixture, isLive = false) {
  */
 export async function generateFootballSignals(mode = 'all') {
   const signals = [];
+
+  if (!process.env.API_FOOTBALL_KEY) {
+    console.log('[Football] API_FOOTBALL_KEY not set — skipping direct football signals');
+    return signals;
+  }
 
   try {
     if (mode === 'live' || mode === 'all') {
