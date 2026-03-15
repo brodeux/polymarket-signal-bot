@@ -82,16 +82,17 @@ export async function runCycle(mode) {
       if (tr?.placed) {
         const openPositions = getOpenPositions(user.userId);
         const openExposure = openPositions.reduce((s, p) => s + p.amount, 0);
-        const remainingBudget = user.budget - openExposure;
+        const remainingBudget = tr.isDemo ? tr.remainingBudget : user.budget - openExposure;
 
-        const confirmMsg = formatTradeConfirmation({
-          marketName: tr.marketName,
-          side: tr.side,
-          amount: tr.amount,
-          entryOdds: tr.entryOdds,
-          potentialPayout: tr.potentialPayout,
-          remainingBudget,
-        });
+        const confirmMsg = (tr.isDemo ? `🎮 *DEMO TRADE SIMULATED*\n` : '') +
+          formatTradeConfirmation({
+            marketName: tr.marketName,
+            side: tr.side,
+            amount: tr.amount,
+            entryOdds: tr.entryOdds,
+            potentialPayout: tr.potentialPayout,
+            remainingBudget,
+          });
         await sendToUser(user.userId, confirmMsg);
       }
 

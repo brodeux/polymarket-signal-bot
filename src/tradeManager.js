@@ -141,6 +141,7 @@ export function recordOpenPosition(userId, position) {
     entryOdds: position.entryOdds,
     potentialPayout: position.potentialPayout,
     orderId: position.orderId || null,
+    isDemo: position.isDemo || false,
     openedAt: new Date().toISOString(),
   });
 
@@ -148,8 +149,10 @@ export function recordOpenPosition(userId, position) {
   stats.totalSpent += position.amount;
   db.write();
 
-  // Deduct one Zap Credit for this trade
-  deductZapCredit(userId);
+  // Zap Credits only deducted for real trades — demo is free
+  if (!position.isDemo) {
+    deductZapCredit(userId);
+  }
 }
 
 export function resolvePosition(positionId, outcome) {

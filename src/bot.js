@@ -23,6 +23,9 @@ import {
   getReferralStats,
   setReferredBy,
   addReferral,
+  setDemoMode,
+  getDemoBalance,
+  adjustDemoBalance,
 } from './userConfig.js';
 import {
   getOpenPositions,
@@ -736,6 +739,73 @@ bot.on('message', async (ctx, next) => {
   }
 });
 
+// ── /demo ─────────────────────────────────────────────────────────────────────
+
+bot.command('demo', ctx => {
+  const uid = userId(ctx);
+  const args = ctx.message.text.split(' ');
+  const action = args[1]?.toLowerCase();
+  const user = getUser(uid);
+
+  if (action === 'on') {
+    setDemoMode(uid, true);
+    const bal = getDemoBalance(uid);
+    return ctx.replyWithMarkdown(
+      [
+        `🎮 *Demo Mode ON*`,
+        ``,
+        `You are now paper trading with *$${bal.toFixed(2)} virtual USDC*.`,
+        `No real money will be used — all trades are simulated.`,
+        ``,
+        `• Signals and auto trading work exactly as in live mode`,
+        `• Demo trades don't cost Zap Credits`,
+        `• Use /demo reset to refill your demo balance`,
+        ``,
+        `When you're ready to go live: /demo off`,
+      ].join('\n')
+    );
+  }
+
+  if (action === 'off') {
+    setDemoMode(uid, false);
+    return ctx.replyWithMarkdown(
+      [
+        `✅ *Demo Mode OFF — Live Trading Active*`,
+        ``,
+        `Your bot is now trading with real funds.`,
+        userHasKey(uid)
+          ? `Use /balance to check your wallet before enabling auto trading.`
+          : `⚠️ No wallet key found. Use /setkey in a private DM to add your key, or send /start to use your auto-generated wallet.`,
+      ].join('\n')
+    );
+  }
+
+  if (action === 'reset') {
+    adjustDemoBalance(uid, 1000 - getDemoBalance(uid));
+    return ctx.replyWithMarkdown(`🔄 *Demo balance reset to $1,000 virtual USDC.*`);
+  }
+
+  // Default: show demo status
+  const bal = getDemoBalance(uid);
+  const isOn = user.demoMode ?? true;
+  return ctx.replyWithMarkdown(
+    [
+      `🎮 *Demo Mode* — ${isOn ? '✅ ON' : '❌ OFF'}`,
+      ``,
+      `💵 Virtual balance: *$${bal.toFixed(2)} USDC*`,
+      ``,
+      isOn
+        ? `You're paper trading. No real money at risk.`
+        : `You're live trading with real funds.`,
+      ``,
+      `Commands:`,
+      `• /demo on — enable demo (paper trading)`,
+      `• /demo off — go live with real money`,
+      `• /demo reset — refill demo balance to $1,000`,
+    ].join('\n')
+  );
+});
+
 // ── /scan ─────────────────────────────────────────────────────────────────────
 
 const VALID_SCAN_MODES = ['markets', 'crypto', 'stocks', 'football', 'football_markets', '5min', '15min', '1hr', 'all'];
@@ -810,6 +880,7 @@ bot.launch({
       { command: 'setmaxdailyloss', description: 'Set daily loss limit' },
       { command: 'pause',          description: 'Pause auto trading' },
       { command: 'resume',         description: 'Resume auto trading' },
+      { command: 'demo',           description: 'Demo mode — paper trade with $1,000 virtual USDC' },
       { command: 'scan',           description: 'Trigger signal scan (markets/crypto/football_markets/all)' },
       { command: 'exportkey',      description: 'Export your private key (DM only)' },
       { command: 'deletekey',      description: 'Remove your stored key' },

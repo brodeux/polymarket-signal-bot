@@ -360,6 +360,49 @@
     .pnl-neg { color: var(--red); }
     .pnl-zero { color: var(--muted2); }
 
+    /* ── Demo banner ─────────────────────────────────────────────────────────── */
+    #demo-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #d97706, #b45309);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+    #demo-banner.show { display: flex; }
+    .demo-banner-text { font-size: 13px; font-weight: 700; color: #fff; }
+    .demo-banner-sub  { font-size: 11px; color: rgba(255,255,255,0.8); margin-top:1px; }
+    .demo-go-live-btn {
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+    }
+
+    /* Demo badge on balance label */
+    .demo-badge {
+      display: inline-block;
+      background: #d97706;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 2px 6px;
+      border-radius: 5px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
     /* ── Sub-tabs (TERMINAL | DEPOSIT | BUY) ────────────────────────────────── */
     .sub-tabs {
       display: flex;
@@ -913,7 +956,7 @@
       <div class="card card-accent">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
           <div>
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">USDC.e Balance</div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">USDC.e Balance<span id="demo-badge" class="demo-badge" style="display:none">DEMO</span></div>
             <div class="balance-big" id="w-balance">$0.00</div>
           </div>
           <div style="text-align:right">
@@ -939,6 +982,15 @@
             <span class="wallet-stat-lbl">Positions</span>
           </div>
         </div>
+      </div>
+
+      <!-- Demo mode banner -->
+      <div id="demo-banner">
+        <div>
+          <div class="demo-banner-text">🎮 DEMO MODE</div>
+          <div class="demo-banner-sub">Paper trading — no real money used</div>
+        </div>
+        <button class="demo-go-live-btn" onclick="goLive()">Go Live →</button>
       </div>
 
       <!-- Sub-tabs -->
@@ -1439,6 +1491,20 @@
     }).join('') + `</div>`;
   }
 
+  // ── Demo mode ──────────────────────────────────────────────────────────────
+  async function goLive() {
+    try {
+      await apiFetch('/api/settings', {
+        method: 'POST',
+        body: JSON.stringify({ demoMode: false }),
+      });
+      document.getElementById('demo-banner').classList.remove('show');
+      document.getElementById('demo-badge').style.display = 'none';
+      toast('✅ Live trading enabled — no more demo mode');
+      loadData();
+    } catch { toast('Could not update — try /demo off in the bot chat'); }
+  }
+
   // ── Sub-tab navigation ─────────────────────────────────────────────────────
   const SUB_TABS = ['terminal', 'deposit', 'buy'];
   function showSubTab(name) {
@@ -1668,6 +1734,11 @@
     // Header
     document.getElementById('hdr-name').textContent = data.firstName || data.username || 'Trader';
     document.getElementById('hdr-credits').textContent = `⚡ ${data.zapCredits} credits`;
+
+    // Demo mode banner
+    const isDemo = data.demo?.enabled ?? false;
+    document.getElementById('demo-banner').classList.toggle('show', isDemo);
+    document.getElementById('demo-badge').style.display = isDemo ? 'inline-block' : 'none';
 
     // Wallet
     document.getElementById('w-balance').textContent = fmt(data.wallet.balance);

@@ -10,7 +10,7 @@ import { generateCryptoSignals } from './crypto.js';
 import { scanAllCategories, scanCategory, scanByTimeToClose } from './markets.js';
 import { findMarket, detectPriceDrift, getWalletBalance, placeOrder } from './polymarket.js';
 import { getTradeAmount, canTrade, recordOpenPosition } from './tradeManager.js';
-import { getAllUsers, setPaused, getUserPrivateKey, userHasKey } from './userConfig.js';
+import { getAllUsers, setPaused, getUserPrivateKey, userHasKey, getDemoBalance, adjustDemoBalance } from './userConfig.js';
 import { recordSignal } from './signalStore.js';
 
 // ── Message formatters ────────────────────────────────────────────────────────
@@ -91,6 +91,51 @@ export function formatTradeConfirmation(trade) {
 // ── Trade execution ───────────────────────────────────────────────────────────
 
 /**
+ * Simulate a trade in demo mode — no real money, no Polymarket API call.
+ * Uses the user's virtual demo balance and records a flagged demo position.
+ */
+function simulateDemoTrade(user, signal, market, tradeAmount) {
+  const demoBalance = getDemoBalance(user.userId);
+  if (demoBalance < tradeAmount) {
+    return { skipped: true, reason: `Demo balance too low ($${demoBalance.toFixed(2)}) — use /demo reset to refill` };
+  }
+
+  const entryOdds = signal.side === 'YES'
+    ? (signal.yesPrice || market?.yesPrice || 0.5)
+    : (signal.noPrice  || market?.noPrice  || 0.5);
+
+  if (!entryOdds || entryOdds <= 0) {
+    return { skipped: true, reason: 'no valid demo odds' };
+  }
+
+  const potentialPayout = tradeAmount / entryOdds;
+  const remaining = adjustDemoBalance(user.userId, -tradeAmount);
+
+  recordOpenPosition(user.userId, {
+    marketId:       market.id,
+    marketName:     market.question,
+    side:           signal.side,
+    amount:         tradeAmount,
+    entryOdds,
+    potentialPayout,
+    orderId:        `DEMO-${Date.now()}`,
+    isDemo:         true,
+  });
+
+  return {
+    placed:          true,
+    isDemo:          true,
+    amount:          tradeAmount,
+    marketName:      market.question,
+    side:            signal.side,
+    entryOdds,
+    potentialPayout,
+    walletBalance:   remaining,
+    remainingBudget: remaining,
+  };
+}
+
+/**
  * Attempt to place a trade for a signal on behalf of a user.
  * Returns a tradeResult object describing what happened.
  */
@@ -99,6 +144,11 @@ async function attemptTrade(user, signal, market) {
 
   if (tradeAmount === 0) {
     return { skipped: true, reason: 'confidence too low — signal only, no trade placed' };
+  }
+
+  // Demo mode: paper trade without real money
+  if (user.demoMode) {
+    return simulateDemoTrade(user, signal, market, tradeAmount);
   }
 
   // Resolve the private key for this user (their own key, or env fallback)

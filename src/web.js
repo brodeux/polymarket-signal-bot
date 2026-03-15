@@ -21,6 +21,7 @@ import {
   setPaused,
   getSniperSettings,
   setSniperSettings,
+  setDemoMode,
 } from './userConfig.js';
 import { getOpenPositions, getDailyStats, getTradeHistory } from './tradeManager.js';
 import { getWalletBalance } from './polymarket.js';
@@ -123,21 +124,33 @@ async function handleMe(req, res, tgUser) {
   const referralStats = getReferralStats(uid);
   const openExposure = openPositions.reduce((s, p) => s + p.amount, 0);
 
+  const demoMode    = user.demoMode ?? true;
+  const demoBalance = user.demoBalance ?? 1000;
+
   let balance = 0;
-  try {
-    const pk = getUserPrivateKey(uid);
-    if (pk) balance = await getWalletBalance(pk);
-  } catch { /* non-fatal */ }
+  if (!demoMode) {
+    try {
+      const pk = getUserPrivateKey(uid);
+      if (pk) balance = await getWalletBalance(pk);
+    } catch { /* non-fatal */ }
+  }
+
+  // In demo mode, show demo balance instead of real wallet balance
+  const displayBalance   = demoMode ? demoBalance : balance;
+  const displayAvailable = demoMode
+    ? Math.max(0, demoBalance - openExposure)
+    : Math.max(0, balance - openExposure);
 
   json(res, 200, {
     userId: uid,
     firstName: tgUser.first_name || '',
     username: tgUser.username || '',
+    demo: { enabled: demoMode, balance: demoBalance },
     wallet: {
       address: walletAddress || null,
-      balance,
+      balance: displayBalance,
       openExposure,
-      available: Math.max(0, balance - openExposure),
+      available: displayAvailable,
     },
     trading: {
       autoTradeEnabled: user.autoTradeEnabled,
@@ -197,6 +210,7 @@ async function handleSettings(req, res, tgUser) {
   const VALID_MARKET_TYPES  = ['5min', '15min', '1hr', 'all'];
   const VALID_TARGET_ASSETS = ['all', 'BTC-USD', 'ETH-USD', 'SOL-USD', 'politics', 'sports', 'football', 'crypto'];
   const update = {};
+  if (typeof body.demoMode === 'boolean')             setDemoMode(uid, body.demoMode);
   if (VALID_MARKET_TYPES.includes(body.marketType))   update.marketType      = body.marketType;
   if (VALID_TARGET_ASSETS.includes(body.targetAsset)) update.targetAsset     = body.targetAsset;
   if (typeof body.entryConfidence === 'number')       update.entryConfidence = body.entryConfidence;

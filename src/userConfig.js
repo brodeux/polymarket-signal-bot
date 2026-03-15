@@ -42,6 +42,9 @@ function ensureUser(userId) {
       entryConfidence: 50,     // 0-100 minimum confidence % to enter
       stopLoss:        70,     // 0-100 emergency stop-loss % of budget
       entryTrigger:    30,     // seconds before market close to snipe (0 = any time)
+      // Demo mode — paper trading with virtual funds
+      demoMode:        true,   // on by default; user switches off when ready to go live
+      demoBalance:     1000,   // virtual USDC balance for demo trades
       createdAt: new Date().toISOString(),
     };
     db.write();
@@ -173,6 +176,31 @@ export function addZapCredits(userId, amount) {
   db.data.users[userId].zapCredits = (db.data.users[userId].zapCredits ?? 0) + amount;
   db.write();
   return db.data.users[userId].zapCredits;
+}
+
+// ── Demo mode ─────────────────────────────────────────────────────────────────
+
+export function setDemoMode(userId, enabled) {
+  ensureUser(userId);
+  db.data.users[userId].demoMode = enabled;
+  // Auto-refill virtual balance when enabling demo
+  if (enabled && (db.data.users[userId].demoBalance ?? 0) < 10) {
+    db.data.users[userId].demoBalance = 1000;
+  }
+  db.write();
+}
+
+export function getDemoBalance(userId) {
+  const user = ensureUser(userId);
+  return user.demoBalance ?? 1000;
+}
+
+export function adjustDemoBalance(userId, delta) {
+  ensureUser(userId);
+  const current = db.data.users[userId].demoBalance ?? 1000;
+  db.data.users[userId].demoBalance = Math.max(0, parseFloat((current + delta).toFixed(2)));
+  db.write();
+  return db.data.users[userId].demoBalance;
 }
 
 // ── Sniper settings ───────────────────────────────────────────────────────────
