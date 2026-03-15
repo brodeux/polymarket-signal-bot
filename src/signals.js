@@ -11,6 +11,7 @@ import { scanAllCategories, scanCategory } from './markets.js';
 import { findMarket, detectPriceDrift, getWalletBalance, placeOrder } from './polymarket.js';
 import { getTradeAmount, canTrade, recordOpenPosition } from './tradeManager.js';
 import { getAllUsers, setPaused, getUserPrivateKey, userHasKey } from './userConfig.js';
+import { recordSignal } from './signalStore.js';
 
 // ── Message formatters ────────────────────────────────────────────────────────
 
@@ -232,6 +233,9 @@ export async function processSignals(signals) {
       }
       tradeResults.push({ user, tradeResult });
     }
+
+    // Persist to signal store so Mini App can display it
+    recordSignal(signal);
 
     results.push({ signal, market, driftData, tradeResults });
   }

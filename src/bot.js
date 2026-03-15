@@ -646,22 +646,94 @@ bot.command('credits', ctx => {
 
 // ── /buycredits ───────────────────────────────────────────────────────────────
 
+const CREDIT_PACKAGES = [
+  { credits: 100,  stars: 50,   label: '⚡ 100 Credits',   desc: 'Starter pack' },
+  { credits: 500,  stars: 200,  label: '⚡ 500 Credits',   desc: 'Most popular' },
+  { credits: 1000, stars: 350,  label: '⚡ 1,000 Credits', desc: 'Best value' },
+  { credits: 5000, stars: 1500, label: '⚡ 5,000 Credits', desc: 'Power trader' },
+];
+
 bot.command('buycredits', ctx => {
+  const uid = userId(ctx);
+  const current = getZapCredits(uid);
+
   return ctx.replyWithMarkdown(
     [
       `💚 *Buy Zap Credits*`,
       ``,
-      `_Payment integration coming soon!_`,
+      `You have *${current}* credits remaining.`,
+      `Each automated trade costs *1 Zap Credit*.`,
       ``,
-      `*Planned packages:*`,
-      `• 100 Credits — $1.00 USDC`,
-      `• 500 Credits — $4.00 USDC`,
-      `• 1,000 Credits — $7.00 USDC`,
-      `• 5,000 Credits — $25.00 USDC`,
-      ``,
-      `Stay tuned — on-chain USDC payments will be enabled in the next update.`,
-    ].join('\n')
+      `Choose a package below — paid with *Telegram Stars* ⭐:`,
+    ].join('\n'),
+    Markup.inlineKeyboard(
+      CREDIT_PACKAGES.map(p => [
+        Markup.button.callback(
+          `${p.label} — ${p.stars} ⭐  (${p.desc})`,
+          `buy_credits_${p.credits}`
+        ),
+      ])
+    )
   );
+});
+
+// Handle credit package button taps → send Telegram Stars invoice
+CREDIT_PACKAGES.forEach(pkg => {
+  bot.action(`buy_credits_${pkg.credits}`, async ctx => {
+    await ctx.answerCbQuery();
+    const uid = userId(ctx);
+    try {
+      await ctx.replyWithInvoice({
+        title:          `${pkg.label} — Polymarket Snipe Bot`,
+        description:    `Fuel ${pkg.credits.toLocaleString()} automated trades. Credits are added instantly after payment.`,
+        payload:        JSON.stringify({ userId: uid, credits: pkg.credits }),
+        provider_token: '',           // empty string = Telegram Stars
+        currency:       'XTR',        // Telegram Stars currency code
+        prices:         [{ label: pkg.label, amount: pkg.stars }],
+        photo_url:      'https://i.imgur.com/6W2YIVK.png',
+        is_flexible:    false,
+      });
+    } catch (err) {
+      console.error('[Bot] sendInvoice error:', err.message);
+      ctx.reply('⚠️ Could not create invoice. Please try again.');
+    }
+  });
+});
+
+// ── Telegram Stars payment handlers ───────────────────────────────────────────
+
+// Always approve — no physical goods, no fraud risk
+bot.on('pre_checkout_query', async ctx => {
+  await ctx.answerPreCheckoutQuery(true);
+});
+
+// Credit the user after successful payment
+bot.on('message', async (ctx, next) => {
+  const payment = ctx.message?.successful_payment;
+  if (!payment) return next();
+
+  try {
+    const payload = JSON.parse(payment.invoice_payload);
+    const uid     = payload.userId || userId(ctx);
+    const credits = payload.credits || 0;
+
+    if (credits > 0) {
+      const newTotal = addZapCredits(uid, credits);
+      await ctx.replyWithMarkdown(
+        [
+          `✅ *Payment confirmed!* Thank you ⭐`,
+          ``,
+          `⚡ *${credits.toLocaleString()} Zap Credits* have been added.`,
+          `Your new balance: *${newTotal} credits*`,
+          ``,
+          `Auto-Sniper is ready to trade. Use /autotrade on if it isn't already active.`,
+        ].join('\n')
+      );
+      console.log(`[Bot] ${credits} credits added for user ${uid} (total: ${newTotal})`);
+    }
+  } catch (err) {
+    console.error('[Bot] successful_payment handler error:', err.message);
+  }
 });
 
 // ── Error handling ────────────────────────────────────────────────────────────

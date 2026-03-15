@@ -23,6 +23,7 @@ import {
 import { getOpenPositions, getDailyStats, getTradeHistory } from './tradeManager.js';
 import { getWalletBalance } from './polymarket.js';
 import { getUserPrivateKey } from './userConfig.js';
+import { getRecentSignals } from './signalStore.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC    = path.join(__dirname, '..', 'public');
@@ -184,6 +185,48 @@ async function handleAutoTrade(req, res, tgUser) {
   });
 }
 
+async function handleSignals(req, res) {
+  const url   = new URL(req.url, 'http://localhost');
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '30', 10), 100);
+  const signals = getRecentSignals(limit);
+  json(res, 200, { signals });
+}
+
+// Credit packages — must match bot.js
+const CREDIT_PACKAGES = {
+  100:  { stars: 50,   label: '100 Zap Credits'   },
+  500:  { stars: 200,  label: '500 Zap Credits'   },
+  1000: { stars: 350,  label: '1,000 Zap Credits' },
+  5000: { stars: 1500, label: '5,000 Zap Credits' },
+};
+
+async function handleBuyCredits(req, res, tgUser) {
+  const url = new URL(req.url, 'http://localhost');
+  const pkg = parseInt(url.searchParams.get('package') || '100', 10);
+  const pack = CREDIT_PACKAGES[pkg];
+
+  if (!pack) return json(res, 400, { error: 'Invalid package' });
+
+  // Create invoice link via Telegram Bot API (native fetch, Node 18+)
+  const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title:          `${pack.label} — Polymarket Snipe Bot`,
+      description:    `Fuel ${pkg.toLocaleString()} automated trades. Credits added instantly after payment.`,
+      payload:        JSON.stringify({ userId: tgUser.id.toString(), credits: pkg }),
+      provider_token: '',
+      currency:       'XTR',
+      prices:         [{ label: pack.label, amount: pack.stars }],
+    }),
+  });
+
+  const data = await tgRes.json();
+  if (!data.ok) return json(res, 502, { error: data.description || 'Telegram API error' });
+
+  json(res, 200, { invoiceLink: data.result, package: pkg, stars: pack.stars });
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 async function handleApi(req, res) {
@@ -201,7 +244,10 @@ async function handleApi(req, res) {
     return res.end();
   }
 
-  // Auth
+  // /api/signals is public (no auth needed — signals are not user-specific)
+  if (route === '/api/signals' && method === 'GET') return handleSignals(req, res);
+
+  // All other routes require auth
   const initDataStr = getInitDataFromReq(req);
   const tgUser = validateInitData(initDataStr);
 
@@ -209,9 +255,10 @@ async function handleApi(req, res) {
     return json(res, 401, { error: 'Unauthorized — invalid or missing initData' });
   }
 
-  if (route === '/api/me'        && method === 'GET')  return handleMe(req, res, tgUser);
-  if (route === '/api/history'   && method === 'GET')  return handleHistory(req, res, tgUser);
-  if (route === '/api/autotrade' && method === 'POST') return handleAutoTrade(req, res, tgUser);
+  if (route === '/api/me'          && method === 'GET')  return handleMe(req, res, tgUser);
+  if (route === '/api/history'     && method === 'GET')  return handleHistory(req, res, tgUser);
+  if (route === '/api/autotrade'   && method === 'POST') return handleAutoTrade(req, res, tgUser);
+  if (route === '/api/buy-credits' && method === 'GET')  return handleBuyCredits(req, res, tgUser);
 
   json(res, 404, { error: 'Not found' });
 }

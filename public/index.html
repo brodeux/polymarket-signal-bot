@@ -662,6 +662,59 @@
       text-decoration: none;
       box-shadow: 0 8px 32px rgba(139,92,246,0.4);
     }
+    /* ── Credit package buttons ──────────────────────────────────────────────── */
+    .credit-pkg-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      width: 100%;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .credit-pkg-btn:active { transform: scale(0.97); }
+    .credit-pkg-btn:hover  { border-color: rgba(139,92,246,0.4); }
+    .credit-pkg-btn.loading { opacity: 0.5; pointer-events: none; }
+
+    .pkg-left  { display: flex; align-items: center; gap: 8px; }
+    .pkg-icon  { font-size: 18px; }
+    .pkg-name  { font-size: 14px; font-weight: 700; }
+
+    .pkg-tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 50px;
+      background: var(--surface);
+      color: var(--muted2);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .pkg-tag.popular { background: rgba(139,92,246,0.15); color: var(--purple2); }
+    .pkg-tag.value   { background: rgba(74,222,128,0.12);  color: var(--green);   }
+
+    .pkg-price {
+      font-size: 14px;
+      font-weight: 800;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.35; }
+    }
   </style>
 </head>
 <body>
@@ -784,62 +837,30 @@
     <!-- ── Signals tab ───────────────────────────────────────────────────────── -->
     <div id="tab-signals" class="tab-pane">
 
-      <div class="monitoring-state">
-        <div class="monitoring-icon">📡</div>
-        <div class="monitoring-title">Actively Monitoring</div>
-        <div class="monitoring-sub">
-          Scanning all major Polymarket categories every 5–30 minutes.<br><br>
-          High &amp; Medium confidence signals trigger auto-trades. Signals appear here and as private Telegram messages when detected.
+      <!-- Status bar -->
+      <div class="card" style="padding:12px 16px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600">
+            <span id="scan-dot" style="width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;display:inline-block;animation:pulse-dot 2s infinite"></span>
+            Actively Monitoring
+          </div>
+          <span id="signal-count" style="font-size:12px;color:var(--muted2)">Loading…</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:6px">
+          Scanning politics · crypto · sports · world · entertainment
         </div>
       </div>
 
       <div class="section-hd">
-        <span class="section-hd-title">Sample Signals</span>
+        <span class="section-hd-title" id="signals-hd-title">Recent Signals</span>
+        <span id="signals-refresh-btn" style="font-size:12px;color:var(--purple2);cursor:pointer" onclick="loadSignals()">↻ Refresh</span>
       </div>
 
-      <div class="signal-item">
-        <div class="signal-item-icon">🗳️</div>
-        <div class="signal-item-body">
-          <div class="signal-item-name">Will the US hold elections in 2026?</div>
-          <div class="signal-item-sub">YES +17¢ in 1hr · Politics</div>
+      <div id="signals-list">
+        <div class="empty-state">
+          <span class="icon">📡</span>
+          Waiting for first signal scan…
         </div>
-        <span class="signal-badge badge-high">HIGH</span>
-      </div>
-
-      <div class="signal-item">
-        <div class="signal-item-icon">🪙</div>
-        <div class="signal-item-body">
-          <div class="signal-item-name">Bitcoin above $90,000 before April?</div>
-          <div class="signal-item-sub">YES +11¢ in 1hr · Crypto</div>
-        </div>
-        <span class="signal-badge badge-med">MED</span>
-      </div>
-
-      <div class="signal-item">
-        <div class="signal-item-icon">🏆</div>
-        <div class="signal-item-body">
-          <div class="signal-item-name">NBA Finals — Golden State wins?</div>
-          <div class="signal-item-sub">NO +9¢ in 1hr · Sports</div>
-        </div>
-        <span class="signal-badge badge-med">MED</span>
-      </div>
-
-      <div class="signal-item">
-        <div class="signal-item-icon">🌍</div>
-        <div class="signal-item-body">
-          <div class="signal-item-name">Fed rate cut before June 2026?</div>
-          <div class="signal-item-sub">YES +19¢ in 1hr · World</div>
-        </div>
-        <span class="signal-badge badge-high">HIGH</span>
-      </div>
-
-      <div class="signal-item">
-        <div class="signal-item-icon">🎬</div>
-        <div class="signal-item-body">
-          <div class="signal-item-name">Dune 3 grosses $800M worldwide?</div>
-          <div class="signal-item-sub">YES +8¢ in 24hr · Entertainment</div>
-        </div>
-        <span class="signal-badge badge-low">LOW</span>
       </div>
 
       <div class="section-hd" style="margin-top:8px">
@@ -880,16 +901,41 @@
         <button class="btn btn-ghost" onclick="shareReferral()">🤝 Share Referral Link</button>
       </div>
 
-      <div class="card">
+      <div class="card card-accent">
         <div class="card-title">Zap Credits</div>
-        <div class="credits-row" style="margin-bottom:0">
+        <div class="credits-row">
           <div>
             <div class="credits-val" id="acc-credits">—</div>
             <div class="credits-lbl">credits remaining</div>
           </div>
+          <div style="text-align:right;font-size:12px;color:var(--muted2)">
+            1 credit<br>per trade
+          </div>
         </div>
-        <div style="height:12px"></div>
-        <button class="btn btn-primary">💚 Buy Zap Credits — Coming Soon</button>
+        <div class="progress-bar" style="margin-bottom:16px">
+          <div class="progress-fill" id="acc-credits-bar" style="width:0%"></div>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Buy with Telegram Stars ⭐</div>
+
+        <div id="credit-packages" style="display:flex;flex-direction:column;gap:9px">
+          <button class="credit-pkg-btn" data-pkg="100"  data-stars="50"   onclick="buyCredits(this)">
+            <span class="pkg-left"><span class="pkg-icon">⚡</span><span class="pkg-name">100 Credits</span><span class="pkg-tag">Starter</span></span>
+            <span class="pkg-price">50 ⭐</span>
+          </button>
+          <button class="credit-pkg-btn" data-pkg="500"  data-stars="200"  onclick="buyCredits(this)">
+            <span class="pkg-left"><span class="pkg-icon">⚡</span><span class="pkg-name">500 Credits</span><span class="pkg-tag popular">Popular</span></span>
+            <span class="pkg-price">200 ⭐</span>
+          </button>
+          <button class="credit-pkg-btn" data-pkg="1000" data-stars="350"  onclick="buyCredits(this)">
+            <span class="pkg-left"><span class="pkg-icon">⚡</span><span class="pkg-name">1,000 Credits</span><span class="pkg-tag value">Best Value</span></span>
+            <span class="pkg-price">350 ⭐</span>
+          </button>
+          <button class="credit-pkg-btn" data-pkg="5000" data-stars="1500" onclick="buyCredits(this)">
+            <span class="pkg-left"><span class="pkg-icon">⚡</span><span class="pkg-name">5,000 Credits</span><span class="pkg-tag">Power</span></span>
+            <span class="pkg-price">1,500 ⭐</span>
+          </button>
+        </div>
       </div>
 
       <div class="card">
@@ -1123,6 +1169,93 @@
     else sub.textContent = '✅ Active — trading on High & Medium signals';
   }
 
+  // ── Signals feed ───────────────────────────────────────────────────────────
+  function renderSignals(signals) {
+    const list  = document.getElementById('signals-list');
+    const count = document.getElementById('signal-count');
+    const title = document.getElementById('signals-hd-title');
+
+    if (!signals.length) {
+      count.textContent = 'No signals yet';
+      title.textContent = 'Recent Signals';
+      list.innerHTML = `<div class="empty-state"><span class="icon">📡</span>Waiting for first signal scan…<br><span style="font-size:12px;margin-top:6px;display:block">Scans run every 5–30 minutes</span></div>`;
+      return;
+    }
+
+    count.textContent = `${signals.length} signals`;
+    title.textContent = 'Recent Signals';
+
+    const confClass = { High: 'badge-high', Medium: 'badge-med', Low: 'badge-low' };
+    const confLabel = { High: 'HIGH', Medium: 'MED', Low: 'LOW' };
+
+    list.innerHTML = signals.map(s => {
+      const emoji   = s.categoryEmoji || '📊';
+      const label   = s.categoryLabel || s.type;
+      const name    = s.question || s.ticker || label;
+      const drift   = s.driftPct ? (s.driftPct > 0 ? `+${s.driftPct}` : `${s.driftPct}`) + '¢' : '';
+      const sub     = [s.side, drift ? `${drift} in ${s.timeframe}` : s.timeframe, label].filter(Boolean).join(' · ');
+      const badge   = confClass[s.confidence] || 'badge-low';
+      const bLabel  = confLabel[s.confidence] || s.confidence;
+      const ago     = timeAgo(s.recordedAt);
+
+      return `
+        <div class="signal-item">
+          <div class="signal-item-icon">${emoji}</div>
+          <div class="signal-item-body">
+            <div class="signal-item-name">${escHtml(name.length > 55 ? name.slice(0, 52) + '…' : name)}</div>
+            <div class="signal-item-sub">${escHtml(sub)} · ${ago}</div>
+          </div>
+          <span class="signal-badge ${badge}">${bLabel}</span>
+        </div>`;
+    }).join('');
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function timeAgo(iso) {
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60)   return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
+  }
+
+  async function loadSignals() {
+    try {
+      const data = await fetch('/api/signals?limit=30');
+      const json = await data.json();
+      renderSignals(json.signals || []);
+    } catch { /* non-fatal */ }
+  }
+
+  // ── Buy Credits (Telegram Stars) ───────────────────────────────────────────
+  async function buyCredits(btn) {
+    if (!isTelegram) { toast('Open in Telegram to purchase'); return; }
+    const pkg = btn.dataset.pkg;
+    btn.classList.add('loading');
+    try {
+      const res  = await apiFetch(`/api/buy-credits?package=${pkg}`);
+      const link = res.invoiceLink;
+      if (!link) throw new Error('No invoice link');
+
+      tg.openInvoice(link, status => {
+        if (status === 'paid') {
+          toast('✅ Payment successful! Credits added.');
+          setTimeout(loadData, 1500); // refresh after server processes payment
+        } else if (status === 'cancelled') {
+          toast('Payment cancelled');
+        } else if (status === 'failed') {
+          toast('⚠️ Payment failed — please try again');
+        }
+      });
+    } catch (err) {
+      console.error('buyCredits error:', err);
+      toast('⚠️ Could not open payment — try again');
+    }
+    btn.classList.remove('loading');
+  }
+
   // ── Load data ──────────────────────────────────────────────────────────────
   async function loadData() {
     if (!isTelegram) return;
@@ -1161,12 +1294,13 @@
     toggle.checked = _autoEnabled;
     updateAutoSub(data.trading.autoTradeEnabled, data.trading.paused);
 
-    // Credits
+    // Credits (wallet tab + account tab)
     const c = data.zapCredits;
     document.getElementById('credits-val').textContent = c;
     document.getElementById('acc-credits').textContent = c;
     const pct = Math.min(100, (c / 100) * 100);
-    document.getElementById('credits-bar').style.width = pct + '%';
+    document.getElementById('credits-bar').style.width  = pct + '%';
+    document.getElementById('acc-credits-bar').style.width = pct + '%';
     document.getElementById('credits-note').textContent =
       c === 0 ? '❌ Depleted — auto trading paused'
       : c < 20 ? `⚠️ Running low — ${c} trades remaining`
@@ -1206,7 +1340,9 @@
 
   // Load on init then refresh every 30s
   loadData();
+  loadSignals();
   setInterval(loadData, 30000);
+  setInterval(loadSignals, 30000);
 </script>
 </body>
 </html>
