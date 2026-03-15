@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Polymarket Snipe Bot</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d0d14;
+      --surface:  #13131e;
+      --surface2: #1a1a28;
+      --border:   rgba(255,255,255,0.07);
+      --purple:   #8b5cf6;
+      --pink:     #ec4899;
+      --purple2:  #a78bfa;
+      --pink2:    #f472b6;
+      --green:    #4ade80;
+      --yellow:   #facc15;
+      --red:      #f87171;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --muted2:   #94a3b8;
+      --grad:     linear-gradient(135deg, #8b5cf6, #ec4899);
+      --nav-h:    64px;
+      --safe-b:   env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    /* ── App shell ──────────────────────────────────────────────────────────── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────────── */
+    #header {
+      flex-shrink: 0;
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: var(--grad);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .header-user {
+      font-size: 13px;
+      color: var(--muted2);
+      text-align: right;
+    }
+
+    .header-user strong { color: var(--text); display: block; font-size: 14px; }
+
+    /* ── Tab content ─────────────────────────────────────────────────────────── */
+    #content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: calc(var(--nav-h) + var(--safe-b) + 8px);
+    }
+
+    .tab-pane { display: none; padding: 16px 16px 0; }
+    .tab-pane.active { display: block; }
+
+    /* ── Bottom nav ──────────────────────────────────────────────────────────── */
+    #bottom-nav {
+      flex-shrink: 0;
+      height: calc(var(--nav-h) + var(--safe-b));
+      padding-bottom: var(--safe-b);
+      display: flex;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      position: relative;
+      z-index: 10;
+    }
+
+    .nav-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 8px 0;
+      transition: color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .nav-tab .icon { font-size: 22px; line-height: 1; }
+
+    .nav-tab.active { color: var(--purple2); }
+
+    /* Gradient active indicator */
+    .nav-tab.active .icon {
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Cards ───────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-accent::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--grad);
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── Wallet card ─────────────────────────────────────────────────────────── */
+    .balance-big {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .balance-label { font-size: 13px; color: var(--muted2); margin-bottom: 16px; }
+
+    .wallet-address {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      gap: 10px;
+    }
+
+    .addr-text {
+      font-size: 13px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--muted2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      color: var(--purple2);
+      font-size: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 0 2px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .wallet-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .wallet-stat {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+
+    .wallet-stat-val {
+      font-size: 14px;
+      font-weight: 700;
+      display: block;
+    }
+
+    .wallet-stat-lbl {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Toggle ──────────────────────────────────────────────────────────────── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .toggle-info { flex: 1; }
+    .toggle-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .toggle-sub  { font-size: 13px; color: var(--muted2); }
+
+    .toggle-switch {
+      position: relative;
+      width: 52px;
+      height: 30px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 30px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.25s;
+    }
+
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: transform 0.25s, background 0.25s;
+    }
+
+    .toggle-switch input:checked + .toggle-track {
+      background: var(--purple);
+      border-color: var(--purple);
+    }
+
+    .toggle-switch input:checked + .toggle-track::after {
+      transform: translateX(22px);
+      background: #fff;
+    }
+
+    /* ── Zap credits bar ─────────────────────────────────────────────────────── */
+    .credits-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .credits-val {
+      font-size: 22px;
+      font-weight: 800;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .credits-lbl { font-size: 12px; color: var(--muted); }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--grad);
+      border-radius: 6px;
+      transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    .credits-note { font-size: 12px; color: var(--muted); }
+
+    /* ── Stats row ───────────────────────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat-box {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+
+    .stat-box-val {
+      font-size: 18px;
+      font-weight: 800;
+      display: block;
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+
+    .stat-box-lbl {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .pnl-pos { color: var(--green); }
+    .pnl-neg { color: var(--red); }
+    .pnl-zero { color: var(--muted2); }
+
+    /* ── Signal feed ─────────────────────────────────────────────────────────── */
+    .signal-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    .signal-item-icon { font-size: 28px; flex-shrink: 0; }
+
+    .signal-item-body { flex: 1; min-width: 0; }
+
+    .signal-item-name {
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+
+    .signal-item-sub { font-size: 12px; color: var(--muted2); }
+
+    .signal-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 50px;
+      flex-shrink: 0;
+    }
+
+    .badge-high   { background: rgba(74,222,128,0.15);  color: var(--green);  }
+    .badge-med    { background: rgba(250,204,21,0.15);   color: var(--yellow); }
+    .badge-low    { background: rgba(248,113,113,0.15);  color: var(--red);    }
+
+    .monitoring-state {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .monitoring-icon { font-size: 48px; margin-bottom: 12px; }
+
+    .monitoring-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+
+    .monitoring-sub { font-size: 14px; color: var(--muted2); line-height: 1.6; }
+
+    /* ── Positions ───────────────────────────────────────────────────────────── */
+    .position-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    .position-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .position-name {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.4;
+      flex: 1;
+    }
+
+    .position-side {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 50px;
+      flex-shrink: 0;
+    }
+
+    .side-yes { background: rgba(74,222,128,0.15);  color: var(--green); }
+    .side-no  { background: rgba(248,113,113,0.15); color: var(--red);   }
+
+    .position-row {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--muted2);
+    }
+
+    .position-row span strong { color: var(--text); }
+
+    /* ── History ─────────────────────────────────────────────────────────────── */
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .history-item:last-child { border-bottom: none; }
+
+    .history-outcome {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .outcome-win  { background: rgba(74,222,128,0.15);  color: var(--green); }
+    .outcome-loss { background: rgba(248,113,113,0.15); color: var(--red);   }
+
+    .history-body { flex: 1; min-width: 0; }
+
+    .history-name {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+
+    .history-meta { font-size: 12px; color: var(--muted2); }
+
+    .history-pnl {
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── Referral card ───────────────────────────────────────────────────────── */
+    .referral-link-box {
+      display: flex;
+      align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .referral-link-text {
+      flex: 1;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--purple2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .referral-stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    /* ── Settings rows ───────────────────────────────────────────────────────── */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+
+    .setting-row:last-child { border-bottom: none; }
+
+    .setting-label { font-size: 14px; font-weight: 600; }
+    .setting-sub   { font-size: 12px; color: var(--muted2); margin-top: 2px; }
+    .setting-val   { font-size: 14px; font-weight: 700; color: var(--purple2); flex-shrink: 0; }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.15s, opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:active { transform: scale(0.96); opacity: 0.85; }
+
+    .btn-primary {
+      background: var(--grad);
+      color: #fff;
+      width: 100%;
+    }
+
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      width: 100%;
+    }
+
+    .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; }
+
+    /* ── Toast ───────────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: calc(var(--nav-h) + var(--safe-b) + 12px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 18px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Loading / error states ──────────────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--muted2);
+      font-size: 14px;
+    }
+
+    .empty-state .icon { font-size: 36px; display: block; margin-bottom: 10px; }
+
+    /* ── Section header ──────────────────────────────────────────────────────── */
+    .section-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-hd-title { font-size: 13px; font-weight: 700; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* ── Landing fallback (shown when not in Telegram) ────────────────────────── */
+    #landing {
+      display: none;
+      min-height: 100%;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      text-align: center;
+      gap: 20px;
+    }
+
+    #landing.show { display: flex; }
+
+    .landing-icon { font-size: 64px; }
+    .landing-title { font-size: 28px; font-weight: 800; }
+    .landing-sub { font-size: 15px; color: var(--muted2); max-width: 300px; line-height: 1.65; }
+
+    .landing-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 32px;
+      background: var(--grad);
+      color: #fff;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 8px 32px rgba(139,92,246,0.4);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Landing fallback: shown only when loaded outside Telegram -->
+<div id="landing">
+  <div class="landing-icon">🎯</div>
+  <h1 class="landing-title">Polymarket<br>Snipe Bot</h1>
+  <p class="landing-sub">Open this app inside Telegram to access your trading dashboard.</p>
+  <a href="https://t.me/Polymkt_snipe_bot" class="landing-btn">
+    Open in Telegram
+  </a>
+</div>
+
+<!-- Mini App shell -->
+<div id="app" style="display:none">
+
+  <!-- Header -->
+  <div id="header">
+    <div class="header-logo">
+      <div class="logo-icon">🎯</div>
+      Snipe Bot
+    </div>
+    <div class="header-user">
+      <strong id="hdr-name">Loading...</strong>
+      <span id="hdr-credits">⚡ — credits</span>
+    </div>
+  </div>
+
+  <!-- Scrollable content -->
+  <div id="content">
+
+    <!-- ── Wallet tab ─────────────────────────────────────────────────────── -->
+    <div id="tab-wallet" class="tab-pane active">
+
+      <div class="card card-accent">
+        <div class="card-title">Wallet Balance</div>
+        <div class="balance-big" id="w-balance">$0.00</div>
+        <div class="balance-label">USDC on Polygon</div>
+        <div class="wallet-address">
+          <span class="addr-text" id="w-address">Generating wallet…</span>
+          <button class="copy-btn" id="copy-addr-btn" title="Copy address">📋</button>
+        </div>
+        <div class="wallet-row">
+          <div class="wallet-stat">
+            <span class="wallet-stat-val" id="w-exposure">$0.00</span>
+            <span class="wallet-stat-lbl">Exposure</span>
+          </div>
+          <div class="wallet-stat">
+            <span class="wallet-stat-val" id="w-available">$0.00</span>
+            <span class="wallet-stat-lbl">Available</span>
+          </div>
+          <div class="wallet-stat">
+            <span class="wallet-stat-val" id="w-positions">0</span>
+            <span class="wallet-stat-lbl">Positions</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Auto-Sniper</div>
+        <div class="toggle-row" id="autotrade-row">
+          <div class="toggle-info">
+            <div class="toggle-name">Auto Trading</div>
+            <div class="toggle-sub" id="autotrade-sub">Loading…</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autotrade-toggle" />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Zap Credits</div>
+        <div class="credits-row">
+          <div>
+            <div class="credits-val" id="credits-val">—</div>
+            <div class="credits-lbl">credits remaining</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showTab('account')">Buy More</button>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="credits-bar" style="width:0%"></div>
+        </div>
+        <div class="credits-note" id="credits-note">Each automated trade costs 1 Zap Credit</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Today's Performance</div>
+        <div class="stats-row">
+          <div class="stat-box">
+            <span class="stat-box-val" id="s-trades">0</span>
+            <span class="stat-box-lbl">Trades</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-val" id="s-wins">0</span>
+            <span class="stat-box-lbl">Wins</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-val pnl-zero" id="s-pnl">$0.00</span>
+            <span class="stat-box-lbl">Net PnL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Open positions -->
+      <div class="section-hd">
+        <span class="section-hd-title">Open Positions</span>
+      </div>
+      <div id="positions-list">
+        <div class="empty-state">
+          <span class="icon">📭</span>
+          No open positions
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Signals tab ───────────────────────────────────────────────────────── -->
+    <div id="tab-signals" class="tab-pane">
+
+      <div class="monitoring-state">
+        <div class="monitoring-icon">📡</div>
+        <div class="monitoring-title">Actively Monitoring</div>
+        <div class="monitoring-sub">
+          Scanning all major Polymarket categories every 5–30 minutes.<br><br>
+          High &amp; Medium confidence signals trigger auto-trades. Signals appear here and as private Telegram messages when detected.
+        </div>
+      </div>
+
+      <div class="section-hd">
+        <span class="section-hd-title">Sample Signals</span>
+      </div>
+
+      <div class="signal-item">
+        <div class="signal-item-icon">🗳️</div>
+        <div class="signal-item-body">
+          <div class="signal-item-name">Will the US hold elections in 2026?</div>
+          <div class="signal-item-sub">YES +17¢ in 1hr · Politics</div>
+        </div>
+        <span class="signal-badge badge-high">HIGH</span>
+      </div>
+
+      <div class="signal-item">
+        <div class="signal-item-icon">🪙</div>
+        <div class="signal-item-body">
+          <div class="signal-item-name">Bitcoin above $90,000 before April?</div>
+          <div class="signal-item-sub">YES +11¢ in 1hr · Crypto</div>
+        </div>
+        <span class="signal-badge badge-med">MED</span>
+      </div>
+
+      <div class="signal-item">
+        <div class="signal-item-icon">🏆</div>
+        <div class="signal-item-body">
+          <div class="signal-item-name">NBA Finals — Golden State wins?</div>
+          <div class="signal-item-sub">NO +9¢ in 1hr · Sports</div>
+        </div>
+        <span class="signal-badge badge-med">MED</span>
+      </div>
+
+      <div class="signal-item">
+        <div class="signal-item-icon">🌍</div>
+        <div class="signal-item-body">
+          <div class="signal-item-name">Fed rate cut before June 2026?</div>
+          <div class="signal-item-sub">YES +19¢ in 1hr · World</div>
+        </div>
+        <span class="signal-badge badge-high">HIGH</span>
+      </div>
+
+      <div class="signal-item">
+        <div class="signal-item-icon">🎬</div>
+        <div class="signal-item-body">
+          <div class="signal-item-name">Dune 3 grosses $800M worldwide?</div>
+          <div class="signal-item-sub">YES +8¢ in 24hr · Entertainment</div>
+        </div>
+        <span class="signal-badge badge-low">LOW</span>
+      </div>
+
+      <div class="section-hd" style="margin-top:8px">
+        <span class="section-hd-title">Trade History</span>
+      </div>
+      <div id="history-list">
+        <div class="empty-state">
+          <span class="icon">📊</span>
+          No closed trades yet
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Account tab ───────────────────────────────────────────────────────── -->
+    <div id="tab-account" class="tab-pane">
+
+      <div class="card card-accent">
+        <div class="card-title">Referral Program</div>
+        <div class="referral-link-box">
+          <span class="referral-link-text" id="ref-link">Loading…</span>
+          <button class="copy-btn" id="copy-ref-btn" title="Copy link">📋</button>
+        </div>
+        <div class="referral-stats-row">
+          <div class="stat-box">
+            <span class="stat-box-val" id="ref-total">0</span>
+            <span class="stat-box-lbl">Referrals</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-val" id="ref-active">0</span>
+            <span class="stat-box-lbl">Active</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-val pnl-zero" id="ref-earn">$0.00</span>
+            <span class="stat-box-lbl">Earned</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost" onclick="shareReferral()">🤝 Share Referral Link</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Zap Credits</div>
+        <div class="credits-row" style="margin-bottom:0">
+          <div>
+            <div class="credits-val" id="acc-credits">—</div>
+            <div class="credits-lbl">credits remaining</div>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn btn-primary">💚 Buy Zap Credits — Coming Soon</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Trading Settings</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Budget</div>
+            <div class="setting-sub">Maximum total exposure</div>
+          </div>
+          <span class="setting-val" id="set-budget">$—</span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Trade Size</div>
+            <div class="setting-sub">USDC per trade</div>
+          </div>
+          <span class="setting-val" id="set-size">$—</span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Max Daily Loss</div>
+            <div class="setting-sub">Auto-pauses when reached</div>
+          </div>
+          <span class="setting-val" id="set-loss">$—</span>
+        </div>
+        <div style="height:4px"></div>
+        <div style="font-size:12px;color:var(--muted2)">Change settings with /setbudget, /settradesize, /setmaxdailyloss in the bot chat.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Security</div>
+        <button class="btn btn-ghost" onclick="openTelegram('/exportkey')">🔑 Export Private Key</button>
+        <div style="height:10px"></div>
+        <button class="btn btn-ghost" onclick="openTelegram('/deletekey')" style="color:var(--red)">🗑 Remove Key from Bot</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav id="bottom-nav">
+    <button class="nav-tab active" id="nav-wallet" onclick="showTab('wallet')">
+      <span class="icon">🏦</span>
+      Wallet
+    </button>
+    <button class="nav-tab" id="nav-signals" onclick="showTab('signals')">
+      <span class="icon">⚡</span>
+      Signals
+    </button>
+    <button class="nav-tab" id="nav-account" onclick="showTab('account')">
+      <span class="icon">👤</span>
+      Account
+    </button>
+  </nav>
+
+</div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
+
+<script>
+  // ── Telegram Web App init ──────────────────────────────────────────────────
+  const tg = window.Telegram?.WebApp;
+  const isTelegram = !!(tg && tg.initData);
+
+  if (isTelegram) {
+    tg.ready();
+    tg.expand();
+    // Match Telegram color scheme
+    document.documentElement.style.setProperty('--bg', '#0d0d14');
+    document.getElementById('app').style.display = 'flex';
+  } else {
+    document.getElementById('landing').classList.add('show');
+  }
+
+  // ── Tab navigation ─────────────────────────────────────────────────────────
+  const TABS = ['wallet', 'signals', 'account'];
+
+  function showTab(name) {
+    TABS.forEach(t => {
+      document.getElementById(`tab-${t}`).classList.toggle('active', t === name);
+      document.getElementById(`nav-${t}`).classList.toggle('active', t === name);
+    });
+    document.getElementById('content').scrollTop = 0;
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  // ── Copy helper ────────────────────────────────────────────────────────────
+  function copyText(text) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => toast('Copied! ✓'));
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast('Copied! ✓');
+    }
+  }
+
+  // ── Open Telegram to a bot command ─────────────────────────────────────────
+  function openTelegram(command) {
+    tg?.close?.();
+    // The user will return to the bot chat
+    toast(`Send ${command} in the bot chat`);
+  }
+
+  // ── Share referral ─────────────────────────────────────────────────────────
+  function shareReferral() {
+    const link = document.getElementById('ref-link').textContent;
+    if (tg?.shareData) {
+      tg.shareData({ text: `Join Polymarket Snipe Bot — ${link}` });
+    } else if (navigator.share) {
+      navigator.share({ title: 'Polymarket Snipe Bot', url: link });
+    } else {
+      copyText(link);
+    }
+  }
+
+  // ── Copy buttons ───────────────────────────────────────────────────────────
+  document.getElementById('copy-addr-btn').onclick = () => {
+    const a = document.getElementById('w-address').textContent;
+    if (a && a !== 'Not set' && a !== 'Generating wallet…') copyText(a);
+  };
+
+  document.getElementById('copy-ref-btn').onclick = () => {
+    copyText(document.getElementById('ref-link').textContent);
+  };
+
+  // ── API fetch helper ───────────────────────────────────────────────────────
+  async function apiFetch(path, opts = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `tma ${tg?.initData || ''}`,
+    };
+    const res = await fetch(path, { ...opts, headers });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  // ── Render helpers ─────────────────────────────────────────────────────────
+  function fmt(n) { return '$' + (parseFloat(n) || 0).toFixed(2); }
+
+  function renderPositions(positions) {
+    const el = document.getElementById('positions-list');
+    if (!positions.length) {
+      el.innerHTML = '<div class="empty-state"><span class="icon">📭</span>No open positions</div>';
+      return;
+    }
+    el.innerHTML = positions.map(p => {
+      const ago = Math.round((Date.now() - new Date(p.openedAt).getTime()) / 60000);
+      return `
+        <div class="position-item">
+          <div class="position-top">
+            <div class="position-name">${p.marketName}</div>
+            <span class="position-side ${p.side === 'YES' ? 'side-yes' : 'side-no'}">${p.side}</span>
+          </div>
+          <div class="position-row">
+            <span><strong>${fmt(p.amount)}</strong> @ ${p.entryOdds.toFixed(2)}</span>
+            <span>Payout: <strong>${fmt(p.potentialPayout)}</strong></span>
+            <span>${ago}m ago</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderHistory(trades) {
+    const el = document.getElementById('history-list');
+    if (!trades.length) {
+      el.innerHTML = '<div class="empty-state"><span class="icon">📊</span>No closed trades yet</div>';
+      return;
+    }
+    el.innerHTML = `<div class="card" style="padding:4px 16px">` + trades.map(t => {
+      const win  = t.outcome === 'WIN';
+      const pnl  = t.pnl >= 0 ? `+${fmt(t.pnl)}` : `-${fmt(Math.abs(t.pnl))}`;
+      return `
+        <div class="history-item">
+          <div class="history-outcome ${win ? 'outcome-win' : 'outcome-loss'}">${win ? '✓' : '✕'}</div>
+          <div class="history-body">
+            <div class="history-name">${t.marketName}</div>
+            <div class="history-meta">${t.side} · ${fmt(t.amount)}</div>
+          </div>
+          <div class="history-pnl ${win ? 'pnl-pos' : 'pnl-neg'}">${pnl}</div>
+        </div>`;
+    }).join('') + `</div>`;
+  }
+
+  // ── Auto-trade toggle ──────────────────────────────────────────────────────
+  let _autoEnabled = false;
+  let _toggleBusy  = false;
+
+  const toggle = document.getElementById('autotrade-toggle');
+
+  toggle.addEventListener('change', async () => {
+    if (_toggleBusy) { toggle.checked = _autoEnabled; return; }
+    _toggleBusy = true;
+    const want = toggle.checked;
+    try {
+      const r = await apiFetch('/api/autotrade', {
+        method: 'POST',
+        body: JSON.stringify({ enabled: want }),
+      });
+      _autoEnabled = r.autoTradeEnabled;
+      toggle.checked = _autoEnabled;
+      updateAutoSub(r.autoTradeEnabled, r.paused);
+      toast(r.autoTradeEnabled ? '⚡ Auto-Sniper enabled!' : '⏸ Auto-Sniper paused');
+    } catch {
+      toggle.checked = _autoEnabled;
+      toast('Could not update — try again');
+    }
+    _toggleBusy = false;
+  });
+
+  function updateAutoSub(enabled, paused) {
+    const sub = document.getElementById('autotrade-sub');
+    if (!enabled) sub.textContent = 'Disabled — signals only';
+    else if (paused) sub.textContent = '⏸ Paused — limit reached';
+    else sub.textContent = '✅ Active — trading on High & Medium signals';
+  }
+
+  // ── Load data ──────────────────────────────────────────────────────────────
+  async function loadData() {
+    if (!isTelegram) return;
+
+    let data;
+    try {
+      data = await apiFetch('/api/me');
+    } catch (err) {
+      console.error('loadData error:', err);
+      return;
+    }
+
+    // Header
+    document.getElementById('hdr-name').textContent = data.firstName || data.username || 'Trader';
+    document.getElementById('hdr-credits').textContent = `⚡ ${data.zapCredits} credits`;
+
+    // Wallet
+    document.getElementById('w-balance').textContent = fmt(data.wallet.balance);
+    const addr = data.wallet.address;
+    document.getElementById('w-address').textContent = addr
+      ? `${addr.slice(0, 8)}…${addr.slice(-6)}`
+      : 'Not set';
+    document.getElementById('w-exposure').textContent  = fmt(data.wallet.openExposure);
+    document.getElementById('w-available').textContent = fmt(data.wallet.available);
+    document.getElementById('w-positions').textContent = data.positions.length;
+
+    // Store full address for copying
+    if (addr) document.getElementById('copy-addr-btn').dataset.full = addr;
+    document.getElementById('copy-addr-btn').onclick = () => {
+      const full = document.getElementById('copy-addr-btn').dataset.full || addr;
+      if (full) copyText(full);
+    };
+
+    // Auto-trade
+    _autoEnabled = data.trading.autoTradeEnabled;
+    toggle.checked = _autoEnabled;
+    updateAutoSub(data.trading.autoTradeEnabled, data.trading.paused);
+
+    // Credits
+    const c = data.zapCredits;
+    document.getElementById('credits-val').textContent = c;
+    document.getElementById('acc-credits').textContent = c;
+    const pct = Math.min(100, (c / 100) * 100);
+    document.getElementById('credits-bar').style.width = pct + '%';
+    document.getElementById('credits-note').textContent =
+      c === 0 ? '❌ Depleted — auto trading paused'
+      : c < 20 ? `⚠️ Running low — ${c} trades remaining`
+      : `Each automated trade costs 1 Zap Credit`;
+
+    // Stats
+    document.getElementById('s-trades').textContent = data.stats.tradesPlaced;
+    document.getElementById('s-wins').textContent   = data.stats.wins;
+    const pnl = data.stats.netPnl;
+    const pnlEl = document.getElementById('s-pnl');
+    pnlEl.textContent = (pnl >= 0 ? '+' : '') + fmt(pnl);
+    pnlEl.className = `stat-box-val ${pnl > 0 ? 'pnl-pos' : pnl < 0 ? 'pnl-neg' : 'pnl-zero'}`;
+
+    // Positions
+    renderPositions(data.positions);
+
+    // Referral
+    document.getElementById('ref-link').textContent  = data.referral.link;
+    document.getElementById('ref-total').textContent = data.referral.total;
+    document.getElementById('ref-active').textContent = data.referral.active;
+    const earn = data.referral.earnings;
+    const earnEl = document.getElementById('ref-earn');
+    earnEl.textContent = fmt(earn);
+    earnEl.className = `stat-box-val ${earn > 0 ? 'pnl-pos' : 'pnl-zero'}`;
+
+    // Settings
+    document.getElementById('set-budget').textContent = fmt(data.trading.budget);
+    document.getElementById('set-size').textContent   = fmt(data.trading.tradeSize);
+    document.getElementById('set-loss').textContent   = fmt(data.trading.maxDailyLoss);
+
+    // History
+    try {
+      const h = await apiFetch('/api/history');
+      renderHistory(h.trades);
+    } catch { /* non-fatal */ }
+  }
+
+  // Load on init then refresh every 30s
+  loadData();
+  setInterval(loadData, 30000);
+</script>
+</body>
+</html>
