@@ -16,6 +16,7 @@
  */
 
 import axios from 'axios';
+import { hasRecentSignal } from './signalStore.js';
 
 const GAMMA_BASE = 'https://gamma-api.polymarket.com';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -215,6 +216,119 @@ function marketToSignal(market, categoryKey) {
     volume24h:      market.volume24h,
     endDate:        market.endDate,
   };
+}
+
+// ── Short-term (closing soon) scanner ────────────────────────────────────────
+
+/**
+ * Generate a signal for a market that is closing soon.
+ * Uses price extremes + 1hr momentum to identify high-conviction near-expiry picks.
+ */
+function closingMarketToSignal(market, timeframe) {
+  const yp      = market.yesPrice;
+  const change1h = market.change1h;
+  const abs1h   = Math.abs(change1h);
+
+  let side, confidence;
+
+  // Near-certainty YES: price ≥ 80¢ and still rising
+  if (yp >= 0.80 && change1h >= 0.03) {
+    side = 'YES';
+    confidence = yp >= 0.90 ? 'High' : 'Medium';
+  // Near-certainty NO: YES price ≤ 20¢ and still falling
+  } else if (yp <= 0.20 && change1h <= -0.03) {
+    side = 'NO';
+    confidence = yp <= 0.10 ? 'High' : 'Medium';
+  // Strong 1hr momentum
+  } else if (abs1h >= 0.15) {
+    side = change1h > 0 ? 'YES' : 'NO';
+    confidence = 'High';
+  } else if (abs1h >= 0.08) {
+    side = change1h > 0 ? 'YES' : 'NO';
+    confidence = 'Medium';
+  } else {
+    return null;
+  }
+
+  const absPct  = (abs1h * 100).toFixed(1);
+  const dirWord = side === 'YES' ? 'surged' : 'rose';
+  const reasoning = abs1h >= 0.05
+    ? `${side} price ${dirWord} ${absPct}¢ in 1hr | YES ${(yp * 100).toFixed(0)}¢ | ${timeframe} pick`
+    : `YES at ${(yp * 100).toFixed(0)}¢ — near certain ${side} | ${timeframe} pick`;
+
+  const labelMap = { '5min': '5 Minute Pick', '15min': '15 Minute Pick', '1hr': '1 Hour Pick' };
+
+  return {
+    type:           'MARKET',
+    category:       'closing_soon',
+    categoryLabel:  labelMap[timeframe] || `${timeframe} Pick`,
+    categoryEmoji:  '⏱',
+    marketId:       market.id,
+    marketQuery:    market.question,
+    question:       market.question,
+    side,
+    confidence,
+    factors:        [reasoning],
+    reasoning,
+    timeframe,
+    driftPct:       parseFloat((change1h * 100).toFixed(2)),
+    driftDir:       change1h > 0 ? 'UP' : 'DOWN',
+    yesPrice:       market.yesPrice,
+    noPrice:        market.noPrice,
+    yesTokenId:     market.yesTokenId,
+    noTokenId:      market.noTokenId,
+    liquidity:      market.liquidity,
+    volume24h:      market.volume24h,
+    endDate:        market.endDate,
+  };
+}
+
+/**
+ * Scan for Polymarket markets closing within the next `maxMinutes` minutes.
+ * Deduplicates against recently recorded signals to avoid channel spam.
+ */
+export async function scanByTimeToClose(maxMinutes = 60, minLiquidity = 500) {
+  const now       = Date.now();
+  const cutoffMs  = maxMinutes * 60 * 1000;
+  const timeframe = maxMinutes <= 6 ? '5min' : maxMinutes <= 16 ? '15min' : '1hr';
+
+  let raw = [];
+  try {
+    const { data } = await axios.get(`${GAMMA_BASE}/markets`, {
+      params: { active: true, closed: false, limit: 100, order: 'end_date_asc' },
+      timeout: 10000,
+    });
+    raw = Array.isArray(data) ? data : (data.markets || []);
+  } catch (err) {
+    console.error('[Markets] scanByTimeToClose fetch error:', err.message);
+    return [];
+  }
+
+  const signals = [];
+  for (const m of raw) {
+    const endDate = m.endDateIso || m.endDate;
+    if (!endDate) continue;
+
+    const closes = new Date(endDate).getTime();
+    if (closes <= now || closes > now + cutoffMs) continue;
+
+    const market = normaliseMarket(m);
+    if (!market.yesTokenId) continue;
+    if (market.liquidity < minLiquidity) continue;
+
+    // Skip if we already signaled this market recently
+    if (hasRecentSignal(market.id, 30)) continue;
+
+    const signal = closingMarketToSignal(market, timeframe);
+    if (!signal) continue;
+    if (signal.side === 'NO' && !market.noTokenId) continue;
+
+    const minsLeft = Math.round((closes - now) / 60000);
+    signals.push(signal);
+    console.log(`[Markets] ${timeframe} ${signal.confidence} ${signal.side}: ${market.question.slice(0, 50)} (closes in ${minsLeft}min)`);
+  }
+
+  return signals;
 }
 
 // ── Main scanner ──────────────────────────────────────────────────────────────

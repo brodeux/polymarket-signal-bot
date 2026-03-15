@@ -360,6 +360,165 @@
     .pnl-neg { color: var(--red); }
     .pnl-zero { color: var(--muted2); }
 
+    /* ── Sub-tabs (TERMINAL | DEPOSIT | BUY) ────────────────────────────────── */
+    .sub-tabs {
+      display: flex;
+      background: var(--surface2);
+      border-radius: 12px;
+      padding: 3px;
+      margin-bottom: 14px;
+      gap: 2px;
+    }
+    .sub-tab {
+      flex: 1;
+      padding: 8px 4px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.18s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sub-tab.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .sub-pane { display: none; }
+    .sub-pane.active { display: block; }
+
+    /* ── Field groups ────────────────────────────────────────────────────────── */
+    .field-group { margin-bottom: 14px; }
+    .field-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .field-select {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 600;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+
+    /* ── Market type buttons ─────────────────────────────────────────────────── */
+    .mtype-btns {
+      display: flex;
+      gap: 6px;
+    }
+    .mtype-btn {
+      flex: 1;
+      padding: 10px 4px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted2);
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mtype-btn.active {
+      background: var(--purple);
+      border-color: var(--purple);
+      color: #fff;
+    }
+
+    /* ── Quick trade size buttons ─────────────────────────────────────────────── */
+    .qsize-btns {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .qsize-btn {
+      flex: 1;
+      padding: 9px 4px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted2);
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .qsize-btn.active {
+      border-color: var(--purple);
+      color: var(--purple2);
+      background: rgba(139,92,246,0.12);
+    }
+
+    /* ── Slider ──────────────────────────────────────────────────────────────── */
+    .slider-group { margin-bottom: 14px; }
+    .slider-hd {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .slider-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--purple2);
+    }
+    input[type=range] {
+      width: 100%;
+      height: 4px;
+      appearance: none;
+      -webkit-appearance: none;
+      background: var(--surface2);
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--purple);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.25);
+      cursor: pointer;
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border: none;
+      border-radius: 50%;
+      background: var(--purple);
+      cursor: pointer;
+    }
+
+    /* ── Terminal action buttons ─────────────────────────────────────────────── */
+    .terminal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .terminal-actions .btn { flex: 1; font-size: 12px; padding: 10px 8px; }
+
     /* ── Signal feed ─────────────────────────────────────────────────────────── */
     .signal-item {
       display: flex;
@@ -747,13 +906,21 @@
   <!-- Scrollable content -->
   <div id="content">
 
-    <!-- ── Wallet tab ─────────────────────────────────────────────────────── -->
+    <!-- ── Terminal tab ───────────────────────────────────────────────────── -->
     <div id="tab-wallet" class="tab-pane active">
 
+      <!-- Wallet header -->
       <div class="card card-accent">
-        <div class="card-title">Wallet Balance</div>
-        <div class="balance-big" id="w-balance">$0.00</div>
-        <div class="balance-label">USDC on Polygon</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">USDC.e Balance</div>
+            <div class="balance-big" id="w-balance">$0.00</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">ZAP CREDITS</div>
+            <div style="font-size:13px;font-weight:700;color:var(--green)" id="credits-val">—</div>
+          </div>
+        </div>
         <div class="wallet-address">
           <span class="addr-text" id="w-address">Generating wallet…</span>
           <button class="copy-btn" id="copy-addr-btn" title="Copy address">📋</button>
@@ -774,63 +941,199 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Auto-Sniper</div>
-        <div class="toggle-row" id="autotrade-row">
-          <div class="toggle-info">
-            <div class="toggle-name">Auto Trading</div>
-            <div class="toggle-sub" id="autotrade-sub">Loading…</div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="autotrade-toggle" />
-            <span class="toggle-track"></span>
-          </label>
-        </div>
+      <!-- Sub-tabs -->
+      <div class="sub-tabs">
+        <button class="sub-tab active" id="stab-terminal" onclick="showSubTab('terminal')">Terminal</button>
+        <button class="sub-tab" id="stab-deposit"  onclick="showSubTab('deposit')">Deposit</button>
+        <button class="sub-tab" id="stab-buy"      onclick="showSubTab('buy')">Buy Credits</button>
       </div>
 
-      <div class="card">
-        <div class="card-title">Zap Credits</div>
-        <div class="credits-row">
-          <div>
-            <div class="credits-val" id="credits-val">—</div>
-            <div class="credits-lbl">credits remaining</div>
-          </div>
-          <button class="btn btn-ghost btn-sm" onclick="showTab('account')">Buy More</button>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" id="credits-bar" style="width:0%"></div>
-        </div>
-        <div class="credits-note" id="credits-note">Each automated trade costs 1 Zap Credit</div>
-      </div>
+      <!-- ── TERMINAL pane ── -->
+      <div id="spane-terminal" class="sub-pane active">
 
-      <div class="card">
-        <div class="card-title">Today's Performance</div>
-        <div class="stats-row">
-          <div class="stat-box">
-            <span class="stat-box-val" id="s-trades">0</span>
-            <span class="stat-box-lbl">Trades</span>
+        <div class="card">
+          <!-- Engage Sniper toggle -->
+          <div class="toggle-row" id="autotrade-row" style="margin-bottom:16px">
+            <div class="toggle-info">
+              <div class="toggle-name">Engage Sniper</div>
+              <div class="toggle-sub" id="autotrade-sub">Bot will execute trades automatically</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="autotrade-toggle" />
+              <span class="toggle-track"></span>
+            </label>
           </div>
-          <div class="stat-box">
-            <span class="stat-box-val" id="s-wins">0</span>
-            <span class="stat-box-lbl">Wins</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-box-val pnl-zero" id="s-pnl">$0.00</span>
-            <span class="stat-box-lbl">Net PnL</span>
-          </div>
-        </div>
-      </div>
 
-      <!-- Open positions -->
-      <div class="section-hd">
-        <span class="section-hd-title">Open Positions</span>
-      </div>
-      <div id="positions-list">
-        <div class="empty-state">
-          <span class="icon">📭</span>
-          No open positions
+          <!-- Target Asset -->
+          <div class="field-group">
+            <label class="field-label">Target Asset</label>
+            <select class="field-select" id="set-target-asset" onchange="saveSetting('targetAsset', this.value)">
+              <option value="all">All Markets</option>
+              <option value="BTC-USD">BTC / USD</option>
+              <option value="ETH-USD">ETH / USD</option>
+              <option value="SOL-USD">SOL / USD</option>
+              <option value="politics">Politics</option>
+              <option value="sports">Sports</option>
+              <option value="football">Football</option>
+              <option value="crypto">Crypto</option>
+            </select>
+          </div>
+
+          <!-- Market Type -->
+          <div class="field-group">
+            <label class="field-label">Market Type</label>
+            <div class="mtype-btns">
+              <button class="mtype-btn" data-val="5min"  onclick="setMarketType(this)">5 Minute</button>
+              <button class="mtype-btn" data-val="15min" onclick="setMarketType(this)">15 Minute</button>
+              <button class="mtype-btn" data-val="1hr"   onclick="setMarketType(this)">1 Hour</button>
+              <button class="mtype-btn active" data-val="all" onclick="setMarketType(this)">All</button>
+            </div>
+          </div>
+
+          <!-- Trade Size -->
+          <div class="field-group">
+            <label class="field-label">Trade Size (USDC.e)</label>
+            <div class="wallet-address" style="margin-bottom:6px">
+              <span style="color:var(--muted2);font-size:15px">$</span>
+              <span id="trade-size-display" style="font-size:18px;font-weight:700;flex:1;padding-left:4px">10</span>
+            </div>
+            <div class="qsize-btns">
+              <button class="qsize-btn active" data-val="10"  onclick="setTradeSize(this)">$10</button>
+              <button class="qsize-btn"        data-val="50"  onclick="setTradeSize(this)">$50</button>
+              <button class="qsize-btn"        data-val="100" onclick="setTradeSize(this)">$100</button>
+              <button class="qsize-btn"        data-val="250" onclick="setTradeSize(this)">$250</button>
+            </div>
+          </div>
+
+          <!-- Snipe Entry Trigger -->
+          <div class="slider-group">
+            <div class="slider-hd">
+              <label class="field-label" style="margin:0">Snipe Entry Trigger</label>
+              <span class="slider-val" id="trigger-val">30s before close</span>
+            </div>
+            <input type="range" id="entry-trigger" min="0" max="300" step="10" value="30"
+              oninput="updateSlider('trigger', this.value)"
+              onchange="saveSetting('entryTrigger', +this.value)" />
+          </div>
+
+          <!-- Entry Confidence -->
+          <div class="slider-group">
+            <div class="slider-hd">
+              <label class="field-label" style="margin:0">Entry Confidence</label>
+              <span class="slider-val" id="confidence-val" style="color:var(--green)">50%</span>
+            </div>
+            <input type="range" id="entry-confidence" min="0" max="100" step="5" value="50"
+              oninput="updateSlider('confidence', this.value)"
+              onchange="saveSetting('entryConfidence', +this.value)" />
+          </div>
+
+          <!-- Emergency Stop-Loss -->
+          <div class="slider-group" style="margin-bottom:0">
+            <div class="slider-hd">
+              <label class="field-label" style="margin:0">Emergency Stop-Loss</label>
+              <span class="slider-val" id="stoploss-val" style="color:var(--red)">70%</span>
+            </div>
+            <input type="range" id="stop-loss" min="0" max="100" step="5" value="70"
+              oninput="updateSlider('stoploss', this.value)"
+              onchange="saveSetting('stopLoss', +this.value)" />
+          </div>
         </div>
-      </div>
+
+        <!-- Performance -->
+        <div class="card">
+          <div class="card-title">Today's Performance</div>
+          <div class="stats-row">
+            <div class="stat-box">
+              <span class="stat-box-val" id="s-trades">0</span>
+              <span class="stat-box-lbl">Trades</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-box-val" id="s-wins">0</span>
+              <span class="stat-box-lbl">Wins</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-box-val pnl-zero" id="s-pnl">$0.00</span>
+              <span class="stat-box-lbl">Net PnL</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal actions -->
+        <div class="terminal-actions">
+          <button class="btn btn-ghost" onclick="openTelegram('/exportkey')">Export Key</button>
+          <button class="btn btn-ghost" onclick="openTelegram('/deletekey')" style="color:var(--red)">Sign Out</button>
+        </div>
+
+        <!-- Open positions -->
+        <div class="section-hd" style="margin-top:14px">
+          <span class="section-hd-title">Open Positions</span>
+        </div>
+        <div id="positions-list">
+          <div class="empty-state"><span class="icon">📭</span>No open positions</div>
+        </div>
+      </div><!-- /spane-terminal -->
+
+      <!-- ── DEPOSIT pane ── -->
+      <div id="spane-deposit" class="sub-pane">
+        <div class="card card-accent">
+          <div class="card-title">Deposit USDC</div>
+          <div style="font-size:13px;color:var(--muted2);margin-bottom:12px">Send USDC.e on the <strong style="color:var(--text)">Polygon</strong> network to your wallet address below.</div>
+          <div class="wallet-address">
+            <span class="addr-text" id="dep-address">Loading…</span>
+            <button class="copy-btn" id="copy-dep-btn" title="Copy address">📋</button>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px;color:var(--muted2)">
+            ⚠️ Only send <strong style="color:var(--yellow)">USDC (Polygon)</strong> to this address. Sending other tokens or on other networks may result in permanent loss.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Network Info</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Network</span><strong>Polygon (MATIC)</strong></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Token</span><strong>USDC.e</strong></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--muted2)">Min deposit</span><strong>$5 USDC</strong></div>
+          </div>
+        </div>
+      </div><!-- /spane-deposit -->
+
+      <!-- ── BUY pane ── -->
+      <div id="spane-buy" class="sub-pane">
+        <div class="card card-accent">
+          <div class="card-title">Zap Credits</div>
+          <div class="credits-row">
+            <div>
+              <div class="credits-val" id="buy-credits-val">—</div>
+              <div class="credits-lbl">credits remaining</div>
+            </div>
+            <div style="text-align:right;font-size:12px;color:var(--muted2)">1 credit<br>per trade</div>
+          </div>
+          <div class="progress-bar" style="margin-bottom:8px">
+            <div class="progress-fill" id="credits-bar" style="width:0%"></div>
+          </div>
+          <div class="credits-note" id="credits-note">Each automated trade costs 1 Zap Credit</div>
+        </div>
+        <div class="card">
+          <div style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Buy with Telegram Stars ⭐</div>
+          <div id="credit-packages-terminal" style="display:flex;flex-direction:column;gap:9px">
+            <button class="credit-pkg-btn" data-pkg="100"  data-stars="50"   onclick="buyCredits(this)">
+              <span class="pkg-left"><span class="pkg-icon">⚡</span><span class="pkg-name">100 Credits</span><span class="pkg-tag">Starter</span></span>
+              <span class="pkg-price">50 ⭐</span>
+            </button>
+            <button class="credit-pkg-btn" data-pkg="500"  data-stars="200"  onclick="buyCredits(this)">
+              <span class="pkg-left"><span class="pkg-icon">⚡</span><span class="pkg-name">500 Credits</span><span class="pkg-tag popular">Popular</span></span>
+              <span class="pkg-price">200 ⭐</span>
+            </button>
+            <button class="credit-pkg-btn" data-pkg="1000" data-stars="350"  onclick="buyCredits(this)">
+              <span class="pkg-left"><span class="pkg-icon">⚡</span><span class="pkg-name">1,000 Credits</span><span class="pkg-tag value">Best Value</span></span>
+              <span class="pkg-price">350 ⭐</span>
+            </button>
+            <button class="credit-pkg-btn" data-pkg="5000" data-stars="1500" onclick="buyCredits(this)">
+              <span class="pkg-left"><span class="pkg-icon">⚡</span><span class="pkg-name">5,000 Credits</span><span class="pkg-tag">Power</span></span>
+              <span class="pkg-price">1,500 ⭐</span>
+            </button>
+          </div>
+        </div>
+      </div><!-- /spane-buy -->
 
     </div>
 
@@ -847,7 +1150,7 @@
           <span id="signal-count" style="font-size:12px;color:var(--muted2)">Loading…</span>
         </div>
         <div style="font-size:12px;color:var(--muted2);margin-top:6px">
-          Scanning politics · crypto · sports · world · entertainment
+          Scanning 5min · 15min · 1hr · football · politics · crypto · sports
         </div>
       </div>
 
@@ -978,8 +1281,8 @@
   <!-- Bottom Navigation -->
   <nav id="bottom-nav">
     <button class="nav-tab active" id="nav-wallet" onclick="showTab('wallet')">
-      <span class="icon">🏦</span>
-      Wallet
+      <span class="icon">🎯</span>
+      Terminal
     </button>
     <button class="nav-tab" id="nav-signals" onclick="showTab('signals')">
       <span class="icon">⚡</span>
@@ -1135,6 +1438,100 @@
         </div>`;
     }).join('') + `</div>`;
   }
+
+  // ── Sub-tab navigation ─────────────────────────────────────────────────────
+  const SUB_TABS = ['terminal', 'deposit', 'buy'];
+  function showSubTab(name) {
+    SUB_TABS.forEach(t => {
+      document.getElementById(`stab-${t}`).classList.toggle('active', t === name);
+      document.getElementById(`spane-${t}`).classList.toggle('active', t === name);
+    });
+  }
+
+  // ── Slider display ─────────────────────────────────────────────────────────
+  function updateSlider(type, val) {
+    if (type === 'trigger') {
+      const s = parseInt(val);
+      document.getElementById('trigger-val').textContent = s === 0 ? 'Any time' : `${s}s before close`;
+    } else if (type === 'confidence') {
+      document.getElementById('confidence-val').textContent = `${val}%`;
+    } else if (type === 'stoploss') {
+      document.getElementById('stoploss-val').textContent = `${val}%`;
+    }
+  }
+
+  // ── Market type selector ───────────────────────────────────────────────────
+  function setMarketType(btn) {
+    document.querySelectorAll('.mtype-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    saveSetting('marketType', btn.dataset.val);
+  }
+
+  // ── Trade size quick buttons ───────────────────────────────────────────────
+  function setTradeSize(btn) {
+    document.querySelectorAll('.qsize-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('trade-size-display').textContent = btn.dataset.val;
+    saveSetting('tradeSize', parseFloat(btn.dataset.val));
+  }
+
+  // ── Settings persistence ───────────────────────────────────────────────────
+  let _saveTimer;
+  const _pendingSettings = {};
+
+  function saveSetting(key, value) {
+    _pendingSettings[key] = value;
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(flushSettings, 800);
+  }
+
+  async function flushSettings() {
+    if (!isTelegram || !Object.keys(_pendingSettings).length) return;
+    try {
+      await apiFetch('/api/settings', {
+        method: 'POST',
+        body: JSON.stringify({ ..._pendingSettings }),
+      });
+      Object.keys(_pendingSettings).forEach(k => delete _pendingSettings[k]);
+    } catch { /* non-fatal */ }
+  }
+
+  async function loadSettings() {
+    if (!isTelegram) return;
+    try {
+      const s = await apiFetch('/api/settings');
+      // Market type buttons
+      document.querySelectorAll('.mtype-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.val === s.marketType);
+      });
+      // Target asset
+      const ta = document.getElementById('set-target-asset');
+      if (ta) ta.value = s.targetAsset || 'all';
+      // Trade size
+      document.getElementById('trade-size-display').textContent = s.tradeSize || 5;
+      document.querySelectorAll('.qsize-btn').forEach(b => {
+        b.classList.toggle('active', parseFloat(b.dataset.val) === s.tradeSize);
+      });
+      // Sliders
+      const trigger = document.getElementById('entry-trigger');
+      trigger.value = s.entryTrigger ?? 30;
+      updateSlider('trigger', trigger.value);
+
+      const conf = document.getElementById('entry-confidence');
+      conf.value = s.entryConfidence ?? 50;
+      updateSlider('confidence', conf.value);
+
+      const sl = document.getElementById('stop-loss');
+      sl.value = s.stopLoss ?? 70;
+      updateSlider('stoploss', sl.value);
+    } catch { /* non-fatal */ }
+  }
+
+  // Deposit address copy button
+  document.getElementById('copy-dep-btn').onclick = () => {
+    const a = document.getElementById('dep-address').textContent;
+    if (a && a !== 'Loading…') copyText(a);
+  };
 
   // ── Auto-trade toggle ──────────────────────────────────────────────────────
   let _autoEnabled = false;
@@ -1294,17 +1691,22 @@
     toggle.checked = _autoEnabled;
     updateAutoSub(data.trading.autoTradeEnabled, data.trading.paused);
 
-    // Credits (wallet tab + account tab)
+    // Credits (terminal header, buy pane, account tab)
     const c = data.zapCredits;
-    document.getElementById('credits-val').textContent = c;
-    document.getElementById('acc-credits').textContent = c;
+    document.getElementById('credits-val').textContent     = `⚡ ${c}`;
+    document.getElementById('buy-credits-val').textContent = c;
+    if (document.getElementById('acc-credits')) document.getElementById('acc-credits').textContent = c;
     const pct = Math.min(100, (c / 100) * 100);
-    document.getElementById('credits-bar').style.width  = pct + '%';
-    document.getElementById('acc-credits-bar').style.width = pct + '%';
+    document.getElementById('credits-bar').style.width = pct + '%';
+    if (document.getElementById('acc-credits-bar')) document.getElementById('acc-credits-bar').style.width = pct + '%';
     document.getElementById('credits-note').textContent =
       c === 0 ? '❌ Depleted — auto trading paused'
       : c < 20 ? `⚠️ Running low — ${c} trades remaining`
       : `Each automated trade costs 1 Zap Credit`;
+
+    // Deposit address
+    const depEl = document.getElementById('dep-address');
+    if (depEl) depEl.textContent = addr || 'Not set';
 
     // Stats
     document.getElementById('s-trades').textContent = data.stats.tradesPlaced;
@@ -1341,6 +1743,7 @@
   // Load on init then refresh every 30s
   loadData();
   loadSignals();
+  loadSettings();
   setInterval(loadData, 30000);
   setInterval(loadSignals, 30000);
 </script>

@@ -738,7 +738,7 @@ bot.on('message', async (ctx, next) => {
 
 // ── /scan ─────────────────────────────────────────────────────────────────────
 
-const VALID_SCAN_MODES = ['markets', 'crypto', 'stocks', 'football', 'football_markets', 'all'];
+const VALID_SCAN_MODES = ['markets', 'crypto', 'stocks', 'football', 'football_markets', '5min', '15min', '1hr', 'all'];
 
 bot.command('scan', async ctx => {
   const args = ctx.message.text.split(' ');

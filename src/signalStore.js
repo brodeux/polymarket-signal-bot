@@ -76,6 +76,18 @@ export function recordSignal(signal) {
 }
 
 /**
+ * Check if a signal for this marketId was recorded within the last `minutes` minutes.
+ * Used to deduplicate short-term scans that run every 1-5 minutes.
+ */
+export function hasRecentSignal(marketId, minutes = 30) {
+  try {
+    db.read();
+    const cutoff = new Date(Date.now() - minutes * 60 * 1000).toISOString();
+    return (db.data?.signals || []).some(s => s.marketId === marketId && s.recordedAt > cutoff);
+  } catch { return false; }
+}
+
+/**
  * Return the most recent signals, newest first.
  */
 export function getRecentSignals(limit = 30) {

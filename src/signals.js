@@ -7,7 +7,7 @@
 import { generateFootballSignals } from './football.js';
 import { generateStockSignals } from './stocks.js';
 import { generateCryptoSignals } from './crypto.js';
-import { scanAllCategories, scanCategory } from './markets.js';
+import { scanAllCategories, scanCategory, scanByTimeToClose } from './markets.js';
 import { findMarket, detectPriceDrift, getWalletBalance, placeOrder } from './polymarket.js';
 import { getTradeAmount, canTrade, recordOpenPosition } from './tradeManager.js';
 import { getAllUsers, setPaused, getUserPrivateKey, userHasKey } from './userConfig.js';
@@ -254,6 +254,9 @@ export async function processSignals(signals) {
  *   'football'          — live football matches (API-Football, requires subscription)
  *   'football_markets'  — football/soccer markets on Polymarket (no external API needed)
  *   'markets'           — Polymarket category scan (politics, sports, world, entertainment, crypto)
+ *   '5min'              — markets closing within 5 minutes (sniper picks)
+ *   '15min'             — markets closing within 15 minutes
+ *   '1hr'               — markets closing within 1 hour
  *   'all'               — full hourly scan: all sources combined
  */
 export async function runSignalCycle(mode = 'all') {
@@ -277,15 +280,27 @@ export async function runSignalCycle(mode = 'all') {
     }
 
     if (mode === 'football_markets' || mode === 'all') {
-      // Scan Polymarket for football/soccer markets — no external API key needed
       const footballMarketSignals = await scanCategory('football_markets', 20);
       allSignals.push(...footballMarketSignals);
     }
 
     if (mode === 'markets' || mode === 'all') {
-      // Scan politics, sports, world events, entertainment on Polymarket
       const marketSignals = await scanAllCategories(['politics', 'sports', 'world', 'entertainment', 'crypto']);
       allSignals.push(...marketSignals);
+    }
+
+    // Short-term sniper picks — markets closing soon
+    if (mode === '5min') {
+      const picks = await scanByTimeToClose(5, 500);
+      allSignals.push(...picks);
+    }
+    if (mode === '15min') {
+      const picks = await scanByTimeToClose(15, 500);
+      allSignals.push(...picks);
+    }
+    if (mode === '1hr' || mode === 'all') {
+      const picks = await scanByTimeToClose(60, 1000);
+      allSignals.push(...picks);
     }
   } catch (err) {
     console.error('[Signals] runSignalCycle generation error:', err.message);

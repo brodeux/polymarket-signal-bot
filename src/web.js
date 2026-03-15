@@ -19,6 +19,8 @@ import {
   getReferralStats,
   setAutoTrade,
   setPaused,
+  getSniperSettings,
+  setSniperSettings,
 } from './userConfig.js';
 import { getOpenPositions, getDailyStats, getTradeHistory } from './tradeManager.js';
 import { getWalletBalance } from './polymarket.js';
@@ -185,6 +187,26 @@ async function handleAutoTrade(req, res, tgUser) {
   });
 }
 
+async function handleSettings(req, res, tgUser) {
+  const uid = tgUser.id.toString();
+  if (req.method === 'GET') {
+    return json(res, 200, getSniperSettings(uid));
+  }
+  // POST — save settings
+  const body = await readBody(req);
+  const VALID_MARKET_TYPES  = ['5min', '15min', '1hr', 'all'];
+  const VALID_TARGET_ASSETS = ['all', 'BTC-USD', 'ETH-USD', 'SOL-USD', 'politics', 'sports', 'football', 'crypto'];
+  const update = {};
+  if (VALID_MARKET_TYPES.includes(body.marketType))   update.marketType      = body.marketType;
+  if (VALID_TARGET_ASSETS.includes(body.targetAsset)) update.targetAsset     = body.targetAsset;
+  if (typeof body.entryConfidence === 'number')       update.entryConfidence = body.entryConfidence;
+  if (typeof body.stopLoss        === 'number')       update.stopLoss        = body.stopLoss;
+  if (typeof body.entryTrigger    === 'number')       update.entryTrigger    = body.entryTrigger;
+  if (typeof body.tradeSize       === 'number')       update.tradeSize       = body.tradeSize;
+  setSniperSettings(uid, update);
+  return json(res, 200, getSniperSettings(uid));
+}
+
 async function handleSignals(req, res) {
   const url   = new URL(req.url, 'http://localhost');
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '30', 10), 100);
@@ -258,6 +280,7 @@ async function handleApi(req, res) {
   if (route === '/api/me'          && method === 'GET')  return handleMe(req, res, tgUser);
   if (route === '/api/history'     && method === 'GET')  return handleHistory(req, res, tgUser);
   if (route === '/api/autotrade'   && method === 'POST') return handleAutoTrade(req, res, tgUser);
+  if (route === '/api/settings'    && (method === 'GET' || method === 'POST')) return handleSettings(req, res, tgUser);
   if (route === '/api/buy-credits' && method === 'GET')  return handleBuyCredits(req, res, tgUser);
 
   json(res, 404, { error: 'Not found' });

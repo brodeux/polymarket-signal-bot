@@ -36,6 +36,12 @@ function ensureUser(userId) {
       referredBy: null,
       referrals: [],
       referralEarnings: 0,
+      // Sniper settings
+      marketType:      'all',  // '5min' | '15min' | '1hr' | 'all'
+      targetAsset:     'all',  // 'BTC-USD' | 'ETH-USD' | 'SOL-USD' | 'politics' | 'sports' | 'football' | 'all'
+      entryConfidence: 50,     // 0-100 minimum confidence % to enter
+      stopLoss:        70,     // 0-100 emergency stop-loss % of budget
+      entryTrigger:    30,     // seconds before market close to snipe (0 = any time)
       createdAt: new Date().toISOString(),
     };
     db.write();
@@ -167,6 +173,32 @@ export function addZapCredits(userId, amount) {
   db.data.users[userId].zapCredits = (db.data.users[userId].zapCredits ?? 0) + amount;
   db.write();
   return db.data.users[userId].zapCredits;
+}
+
+// ── Sniper settings ───────────────────────────────────────────────────────────
+
+export function setSniperSettings(userId, { marketType, targetAsset, entryConfidence, stopLoss, entryTrigger, tradeSize } = {}) {
+  ensureUser(userId);
+  const u = db.data.users[userId];
+  if (marketType      !== undefined) u.marketType      = marketType;
+  if (targetAsset     !== undefined) u.targetAsset     = targetAsset;
+  if (entryConfidence !== undefined) u.entryConfidence = Math.max(0, Math.min(100, entryConfidence));
+  if (stopLoss        !== undefined) u.stopLoss        = Math.max(0, Math.min(100, stopLoss));
+  if (entryTrigger    !== undefined) u.entryTrigger    = Math.max(0, entryTrigger);
+  if (tradeSize       !== undefined) u.tradeSize       = Math.max(1, tradeSize);
+  db.write();
+}
+
+export function getSniperSettings(userId) {
+  const u = ensureUser(userId);
+  return {
+    marketType:      u.marketType      ?? 'all',
+    targetAsset:     u.targetAsset     ?? 'all',
+    entryConfidence: u.entryConfidence ?? 50,
+    stopLoss:        u.stopLoss        ?? 70,
+    entryTrigger:    u.entryTrigger    ?? 30,
+    tradeSize:       u.tradeSize       ?? 5,
+  };
 }
 
 // ── Referral system ───────────────────────────────────────────────────────────

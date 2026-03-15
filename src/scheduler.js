@@ -145,17 +145,24 @@ async function sendDailySummaries() {
 // ── Cron jobs ─────────────────────────────────────────────────────────────────
 
 export function startScheduler() {
-  // Every 15 minutes — crypto (BTC, ETH, SOL) + stocks (TSLA, NVDA) + live football
+  // Every 5 minutes — 5min sniper picks (markets closing within 5 min)
+  cron.schedule('*/5 * * * *', async () => {
+    await runCycle('5min');
+  }, { timezone: 'UTC' });
+
+  // Every 15 minutes — crypto + stocks + football + 15min sniper picks
   cron.schedule('*/15 * * * *', async () => {
     await runCycle('crypto');
     await runCycle('stocks');
     await runCycle('football');
+    await runCycle('15min');
   }, { timezone: 'UTC' });
 
-  // Every 30 minutes — Polymarket category scan (politics, sports, world, entertainment, football)
+  // Every 30 minutes — Polymarket category scan + football markets + 1hr sniper picks
   cron.schedule('*/30 * * * *', async () => {
     await runCycle('markets');
     await runCycle('football_markets');
+    await runCycle('1hr');
   }, { timezone: 'UTC' });
 
   // Every hour — full market scan (all sources combined)
