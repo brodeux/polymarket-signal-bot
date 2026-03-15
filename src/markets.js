@@ -65,6 +65,10 @@ function normaliseMarket(m) {
   const prices   = Array.isArray(m.outcomePrices) ? m.outcomePrices.map(p => parseFloat(p) || 0) : [];
   const outcomes = m.outcomes || ['YES', 'NO'];
 
+  const yesPrice = prices[0] > 0 ? prices[0] : 0;
+  // Binary markets: YES + NO ≈ 1.0. Derive noPrice if the API didn't return it.
+  const noPrice  = prices[1] > 0 ? prices[1] : (yesPrice > 0 ? parseFloat((1 - yesPrice).toFixed(4)) : 0);
+
   return {
     id:        m.id || m.conditionId,
     question:  m.question,
@@ -75,8 +79,8 @@ function normaliseMarket(m) {
     volume24h: parseFloat(m.volume24hr   || 0),
     yesTokenId: tokenIds[0] || null,
     noTokenId:  tokenIds[1] || null,
-    yesPrice:   prices[0]   || 0,
-    noPrice:    prices[1]   || 0,
+    yesPrice,
+    noPrice,
     // Built-in price change fields (absolute change in YES price, e.g. 0.08 = 8 cent move)
     change1h:  parseFloat(m.oneHourPriceChange  || 0),
     change1d:  parseFloat(m.oneDayPriceChange   || 0),
@@ -169,13 +173,15 @@ function marketToSignal(market, categoryKey) {
   }
 
   // Direction: positive change = YES becoming more likely → bet YES
-  //            negative change = YES drifting down → bet NO
+  //            negative change = YES drifting down → NO is rising → bet NO
   const side = changePct > 0 ? 'YES' : 'NO';
-  const pctDisplay = (changePct * 100).toFixed(1);
-  const dirWord = changePct > 0 ? 'surged' : 'dropped';
+  const absPct = Math.abs(changePct * 100).toFixed(1);
+  // For YES signals: YES price surged. For NO signals: NO price surged (inverse of YES drop).
+  const signalSidePrice = side === 'YES' ? market.yesPrice : market.noPrice;
+  const dirWord = side === 'YES' ? 'surged' : 'rose';
 
   const reasoning = [
-    `YES price ${dirWord} ${Math.abs(parseFloat(pctDisplay)).toFixed(1)}¢ in ${timeframe}`,
+    `${side} price ${dirWord} ${absPct}¢ in ${timeframe}`,
     `Current: YES ${(market.yesPrice * 100).toFixed(0)}¢  NO ${(market.noPrice * 100).toFixed(0)}¢`,
     `24h vol: $${(market.volume24h / 1000).toFixed(0)}k`,
   ].join(' | ');
@@ -190,7 +196,7 @@ function marketToSignal(market, categoryKey) {
     question:       market.question,
     side,
     confidence,
-    factors:        [`YES price ${dirWord} ${Math.abs(parseFloat(pctDisplay))}¢ in ${timeframe}`],
+    factors:        [`${side} price ${dirWord} ${absPct}¢ in ${timeframe}`],
     reasoning,
     timeframe,
     driftPct:       parseFloat((changePct * 100).toFixed(2)),
@@ -233,10 +239,16 @@ export async function scanCategory(categoryKey, marketsToCheck = 15) {
   for (const market of markets) {
     if (!market.yesTokenId) continue; // skip markets with no order book
     const signal = marketToSignal(market, categoryKey);
-    if (signal) {
-      signals.push(signal);
-      console.log(`[Markets] ${signal.confidence} signal: ${signal.question.slice(0, 55)} (${signal.driftPct > 0 ? '+' : ''}${signal.driftPct}¢)`);
+    if (!signal) continue;
+
+    // For NO signals: if the market only published one token ID, we can't trade NO
+    if (signal.side === 'NO' && !market.noTokenId) {
+      console.log(`[Markets] Skipping NO signal (no NO token ID): ${market.question.slice(0, 55)}`);
+      continue;
     }
+
+    signals.push(signal);
+    console.log(`[Markets] ${signal.confidence} ${signal.side} signal: ${signal.question.slice(0, 55)} (${signal.driftPct > 0 ? '+' : ''}${signal.driftPct}¢)`);
   }
 
   return signals;
